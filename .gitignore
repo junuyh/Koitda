@@ -1,0 +1,26 @@
+# 환경변수·비밀값
+.env
+.env.*
+!.env.example
+
+# Java / Gradle
+build/
+.gradle/
+*.class
+*.jar
+
+# Node
+node_modules/
+.next/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# 로그
+*.log
