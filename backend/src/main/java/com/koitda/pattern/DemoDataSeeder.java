@@ -60,8 +60,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 		Long patternId = jdbc.queryForObject("""
 				INSERT INTO selling_pattern
 				  (seller_id, title, designer_name, category_id, craft_type, difficulty,
-				   language, regular_price, sale_price, product_status, published_at)
-				VALUES (?, ?, ?, ?, ?, ?, 'ko', ?, ?, 'APPROVED', now())
+				   language, regular_price, sale_price, product_status, published_at,
+				   gauge_info, size_info, description)
+				VALUES (?, ?, ?, ?, ?, ?, 'ko', ?, ?, 'APPROVED', now(),
+				  '{"stitches":22,"rows":30,"swatchWidthCm":10,"swatchHeightCm":10,"needleSizeMm":4.5}'::jsonb,
+				  '{"sizes":[{"label":"1 (S)","castOnStitches":132,"measurements":{"chestCm":96,"lengthCm":58,"sleeveLengthCm":46}},{"label":"2 (M)","castOnStitches":148,"measurements":{"chestCm":106,"lengthCm":60,"sleeveLengthCm":47}}]}'::jsonb,
+				  '샘플 도안 상세 설명입니다. 실제 판매 도안 등록 기능은 이후 슬라이스에서 추가됩니다.')
 				RETURNING id
 				""", Long.class, sellerId, title, designer, categoryId, craft, difficulty, price, price);
 

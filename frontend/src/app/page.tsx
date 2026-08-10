@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { authApi } from "@/features/auth/api";
-import { buttonClass } from "@/components/form";
 
 export default function HomePage() {
   const queryClient = useQueryClient();
@@ -35,20 +34,34 @@ export default function HomePage() {
               <p className="text-xs text-neutral-500">
                 역할: {me.roles.join(", ")} · 포인트: {me.pointBalance.toLocaleString()}P
               </p>
-              <button
-                type="button"
-                onClick={() => logout.mutate()}
-                disabled={logout.isPending}
-                className={buttonClass}
-              >
-                로그아웃
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  href="/patterns"
+                  className="rounded-md bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+                >
+                  도안 둘러보기
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => logout.mutate()}
+                  disabled={logout.isPending}
+                  className="rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                >
+                  로그아웃
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/login"
+                href="/patterns"
                 className="rounded-md bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+              >
+                도안 둘러보기
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
               >
                 로그인
               </Link>

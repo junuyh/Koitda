@@ -3,6 +3,7 @@ package com.koitda.pattern.api;
 import com.koitda.common.dto.PageResponse;
 import com.koitda.common.security.CustomUserDetails;
 import com.koitda.pattern.domain.CraftType;
+import com.koitda.pattern.dto.PatternDetailResponse;
 import com.koitda.pattern.dto.PatternListItemResponse;
 import com.koitda.pattern.service.PatternQueryService;
 import org.springframework.data.domain.Pageable;
@@ -37,5 +38,14 @@ public class PatternController {
 			@PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 		Long userId = (principal != null) ? principal.getUserId() : null;
 		return patternQueryService.search(q, categoryId, craftType, difficulty, minPrice, maxPrice, userId, pageable);
+	}
+
+	/** 도안 상세(PATTERN-004). 비로그인도 조회 가능. */
+	@GetMapping("/{patternId}")
+	public PatternDetailResponse detail(
+			@org.springframework.web.bind.annotation.PathVariable Long patternId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		Long userId = (principal != null) ? principal.getUserId() : null;
+		return patternQueryService.detail(patternId, userId);
 	}
 }

@@ -13,4 +13,9 @@ public interface SellingPatternImageRepository extends JpaRepository<SellingPatt
 	@Query("select i from SellingPatternImage i join fetch i.file "
 			+ "where i.patternId in :patternIds and i.thumbnail = true")
 	List<SellingPatternImage> findThumbnails(@Param("patternIds") Collection<Long> patternIds);
+
+	/** 상세 화면용 — 한 도안의 모든 이미지를 정렬 순서대로. */
+	@Query("select i from SellingPatternImage i join fetch i.file "
+			+ "where i.patternId = :patternId order by i.sortOrder asc, i.id asc")
+	List<SellingPatternImage> findByPattern(@Param("patternId") Long patternId);
 }

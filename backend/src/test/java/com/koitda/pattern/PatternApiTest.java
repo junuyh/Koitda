@@ -43,8 +43,9 @@ class PatternApiTest {
 		long patternId = jdbc.queryForObject("""
 				INSERT INTO selling_pattern
 				  (seller_id, title, designer_name, craft_type, difficulty,
-				   sale_price, regular_price, product_status, published_at)
-				VALUES (?, ?, ?, ?, '초급', 10000, 10000, ?, now())
+				   sale_price, regular_price, product_status, published_at, gauge_info)
+				VALUES (?, ?, ?, ?, '초급', 10000, 10000, ?, now(),
+				  '{"stitches":22,"rows":30,"needleSizeMm":4.5}'::jsonb)
 				RETURNING id
 				""", Long.class, sellerId, title, "원작자" + title, craft, status);
 		long fileId = jdbc.queryForObject("""
@@ -88,6 +89,15 @@ class PatternApiTest {
 		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Test
+	void 검색어_없는_기본_목록도_동작한다() throws Exception {
+		seedPattern("기본목록도안", "KNIT", "APPROVED");
+		// q 파라미터 없이 호출 — null 검색어 경로(과거 lower(bytea) 오류) 회귀 방지
+		mockMvc.perform(get("/api/v1/patterns"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalElements").isNumber());
 	}
 
 	@Test
@@ -139,5 +149,28 @@ class PatternApiTest {
 	void 비로그인_위시는_401() throws Exception {
 		mockMvc.perform(post("/api/v1/patterns/1/wish").with(csrf()))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void 상세는_필드와_게이지JSON을_중첩객체로_준다() throws Exception {
+		long id = seedPattern("상세도안", "KNIT", "APPROVED");
+		mockMvc.perform(get("/api/v1/patterns/" + id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.title").value("상세도안"))
+				.andExpect(jsonPath("$.craftType").value("KNIT"))
+				// @JsonRawValue 로 gauge_info 가 문자열이 아니라 중첩 JSON 객체로 나와야 한다
+				.andExpect(jsonPath("$.gaugeInfo.stitches").value(22))
+				.andExpect(jsonPath("$.gaugeInfo.needleSizeMm").value(4.5));
+	}
+
+	@Test
+	void 승인되지_않았거나_없는_도안_상세는_404() throws Exception {
+		long draftId = seedPattern("초안상세도안", "KNIT", "DRAFT");
+		mockMvc.perform(get("/api/v1/patterns/" + draftId))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("PATTERN_NOT_FOUND"));
+
+		mockMvc.perform(get("/api/v1/patterns/99999999"))
+				.andExpect(status().isNotFound());
 	}
 }

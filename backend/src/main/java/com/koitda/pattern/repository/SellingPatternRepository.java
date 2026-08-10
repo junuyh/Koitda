@@ -1,7 +1,9 @@
 package com.koitda.pattern.repository;
 
 import com.koitda.pattern.domain.CraftType;
+import com.koitda.pattern.domain.ProductStatus;
 import com.koitda.pattern.domain.SellingPattern;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +12,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SellingPatternRepository extends JpaRepository<SellingPattern, Long> {
+
+	/** 상세 조회 — 승인된 도안만. seller 는 판매자명 표시용으로 함께 로딩. */
+	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "seller")
+	Optional<SellingPattern> findByIdAndProductStatus(Long id, ProductStatus productStatus);
 
 	/**
 	 * 카탈로그 목록. APPROVED 도안만 노출한다. 각 필터는 null 이면 조건에서 제외된다.
@@ -20,7 +26,7 @@ public interface SellingPatternRepository extends JpaRepository<SellingPattern, 
 			select p from SellingPattern p
 				join fetch p.seller
 			where p.productStatus = com.koitda.pattern.domain.ProductStatus.APPROVED
-				and (:q is null or lower(p.title) like lower(concat('%', :q, '%'))
+				and (:q = '' or lower(p.title) like lower(concat('%', :q, '%'))
 								or lower(p.designerName) like lower(concat('%', :q, '%')))
 				and (:categoryId is null or p.categoryId = :categoryId)
 				and (:craftType is null or p.craftType = :craftType)
@@ -31,7 +37,7 @@ public interface SellingPatternRepository extends JpaRepository<SellingPattern, 
 			countQuery = """
 			select count(p) from SellingPattern p
 			where p.productStatus = com.koitda.pattern.domain.ProductStatus.APPROVED
-				and (:q is null or lower(p.title) like lower(concat('%', :q, '%'))
+				and (:q = '' or lower(p.title) like lower(concat('%', :q, '%'))
 								or lower(p.designerName) like lower(concat('%', :q, '%')))
 				and (:categoryId is null or p.categoryId = :categoryId)
 				and (:craftType is null or p.craftType = :craftType)

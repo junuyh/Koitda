@@ -11,6 +11,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 도안 본체. 이번 슬라이스는 카탈로그 조회용 스칼라 필드만 매핑한다.
@@ -74,6 +76,42 @@ public class SellingPattern {
 	@Column(name = "published_at")
 	private OffsetDateTime publishedAt;
 
+	// --- 상세 화면용 추가 필드 ---
+	@Column(name = "product_form")
+	private String productForm;
+
+	@Column(name = "delivery_method")
+	private String deliveryMethod;
+
+	@Column(name = "availability_days")
+	private Integer availabilityDays;
+
+	@Column(name = "reference_video_url")
+	private String referenceVideoUrl;
+
+	@Column(name = "yarn_requirement")
+	private String yarnRequirement;
+
+	@Column(name = "description")
+	private String description;
+
+	// JSONB → 원시 JSON 문자열로 매핑(@JdbcTypeCode). 응답에서는 @JsonRawValue 로 중첩 JSON 그대로 노출.
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "gauge_info")
+	private String gaugeInfo;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "size_info")
+	private String sizeInfo;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "needle_info")
+	private String needleInfo;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "technique_info")
+	private String techniqueInfo;
+
 	protected SellingPattern() {
 	}
 
@@ -135,5 +173,49 @@ public class SellingPattern {
 
 	public int getViewCount() {
 		return viewCount;
+	}
+
+	public OffsetDateTime getPublishedAt() {
+		return publishedAt;
+	}
+
+	public String getProductForm() {
+		return productForm;
+	}
+
+	public String getDeliveryMethod() {
+		return deliveryMethod;
+	}
+
+	public Integer getAvailabilityDays() {
+		return availabilityDays;
+	}
+
+	public String getReferenceVideoUrl() {
+		return referenceVideoUrl;
+	}
+
+	public String getYarnRequirement() {
+		return yarnRequirement;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public String getGaugeInfo() {
+		return gaugeInfo;
+	}
+
+	public String getSizeInfo() {
+		return sizeInfo;
+	}
+
+	public String getNeedleInfo() {
+		return needleInfo;
+	}
+
+	public String getTechniqueInfo() {
+		return techniqueInfo;
 	}
 }
