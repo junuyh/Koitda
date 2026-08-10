@@ -1,16 +1,20 @@
 package com.koitda.post.dto;
 
 import com.koitda.project.domain.ProjectStatus;
+import com.koitda.project.domain.ProjectVisibility;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /**
- * 오늘의 로그 작성(POST-001·003). 블록 에디터 본문은 후속 슬라이스에서 확장하고,
- * 이번에는 상태·기록일·짧은 코멘트를 저장한다.
+ * 오늘의 로그 작성(POST-001·003·010·011).
+ * visibility 미지정 시 상위 니팅로그 설정을 상속한다.
+ * 비공개 니팅로그에 공개 로그를 저장하려면 publishProjectConfirmed=true 로 니팅로그 공개에 동의해야 한다.
  */
 public record CreateLogRequest(
 		@NotNull ProjectStatus knittingStatus,
 		String title,
 		LocalDate logDate,
-		String comment) {
+		String comment,
+		ProjectVisibility visibility,
+		boolean publishProjectConfirmed) {
 }

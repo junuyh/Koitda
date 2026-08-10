@@ -36,24 +36,41 @@ public class LogService {
 
 		LocalDate logDate = req.logDate() != null ? req.logDate() : LocalDate.now();
 		String displayTitle = resolveDisplayTitle(projectId, req.title(), logDate);
-		// ⑥ 단계: 로그 공개값은 니팅로그를 상속한다. 상향 전파(로그 공개→니팅로그 공개)는 ⑦에서.
-		ProjectVisibility visibility = project.getVisibility();
+
+		// 상속(POST-010): 미지정 시 니팅로그 공개값을 따른다.
+		ProjectVisibility requested = req.visibility() != null ? req.visibility() : project.getVisibility();
+		ProjectVisibility logVisibility;
+		boolean projectPublished = false;
+		if (requested == ProjectVisibility.PUBLIC && project.getVisibility() == ProjectVisibility.PRIVATE) {
+			// 상향 전파(POST-011): 확인하면 니팅로그도 공개, 아니면 로그를 비공개로 저장.
+			if (req.publishProjectConfirmed()) {
+				project.publish();
+				logVisibility = ProjectVisibility.PUBLIC;
+				projectPublished = true;
+			}
+			else {
+				logVisibility = ProjectVisibility.PRIVATE;
+			}
+		}
+		else {
+			logVisibility = requested;
+		}
 
 		ContentPost post = ContentPost.forProjectLog(userId, projectId, req.knittingStatus(),
-				req.title(), displayTitle, null, logDate, req.comment(), visibility);
+				req.title(), displayTitle, null, logDate, req.comment(), logVisibility);
 		postRepository.save(post);
 
 		// 상태 파생: 기록일 기준 최신 로그의 상태로 니팅로그 상태를 갱신(POST-007)
 		postRepository.findFirstByProjectIdAndPostTypeAndDeletedAtIsNullOrderByLogDateDescCreatedAtDesc(
 						projectId, PostType.PROJECT_LOG)
 				.ifPresent(latest -> project.changeStatus(latest.getKnittingStatus()));
-		if (visibility == ProjectVisibility.PUBLIC) {
+		if (logVisibility == ProjectVisibility.PUBLIC) {
 			project.increasePublicLogCount();
 		}
 		projectRepository.save(project);
 
-		return new LogCreatedResponse(post.getId(), displayTitle,
-				post.getKnittingStatus().name(), visibility.name(), project.getStatus().name());
+		return new LogCreatedResponse(post.getId(), displayTitle, post.getKnittingStatus().name(),
+				logVisibility.name(), project.getStatus().name(), projectPublished);
 	}
 
 	@Transactional(readOnly = true)

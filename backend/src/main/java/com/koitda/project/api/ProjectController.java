@@ -4,14 +4,17 @@ import com.koitda.common.security.CustomUserDetails;
 import com.koitda.project.dto.CreateProjectRequest;
 import com.koitda.project.dto.ProjectCreatedResponse;
 import com.koitda.project.dto.ProjectDetailResponse;
+import com.koitda.project.dto.ChangeVisibilityRequest;
 import com.koitda.project.dto.ProjectGroupResponse;
 import com.koitda.project.dto.ProjectListItemResponse;
+import com.koitda.project.dto.VisibilityImpactResponse;
 import com.koitda.project.service.ProjectService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,5 +57,21 @@ public class ProjectController {
 	public ProjectDetailResponse detail(@PathVariable Long projectId,
 			@AuthenticationPrincipal CustomUserDetails principal) {
 		return projectService.detail(projectId, principal.getUserId());
+	}
+
+	/** 공개 변경 영향 조회(PROJECT-019) — 비공개 전환 전 함께 비공개될 공개 로그 수. */
+	@PostMapping("/{projectId}/visibility-impact")
+	public VisibilityImpactResponse visibilityImpact(@PathVariable Long projectId,
+			@Valid @RequestBody ChangeVisibilityRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.visibilityImpact(principal.getUserId(), projectId, request.visibility());
+	}
+
+	/** 니팅로그 공개 설정 변경(PROJECT-019). 비공개 전환 시 하위 로그 함께 비공개. */
+	@PatchMapping("/{projectId}/visibility")
+	public void changeVisibility(@PathVariable Long projectId,
+			@Valid @RequestBody ChangeVisibilityRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		projectService.changeVisibility(principal.getUserId(), projectId, request.visibility(), request.confirmed());
 	}
 }

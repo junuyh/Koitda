@@ -16,6 +16,29 @@ export default function ProjectDetailPage() {
   const { data: p, isLoading, isError } = useQuery({ queryKey: ["project", id], queryFn: () => projectApi.get(id) });
   const { data: logs } = useQuery({ queryKey: ["project", id, "logs"], queryFn: () => projectApi.logs(id) });
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["project", id] });
+    queryClient.invalidateQueries({ queryKey: ["project", id, "logs"] });
+  };
+
+  const changeVisibility = useMutation({
+    mutationFn: async (target: "PRIVATE" | "PUBLIC") => {
+      if (target === "PRIVATE") {
+        const impact = await projectApi.visibilityImpact(id, "PRIVATE");
+        if (
+          impact.affectedPublicLogCount > 0 &&
+          !window.confirm(`공개 중인 로그 ${impact.affectedPublicLogCount}개가 함께 비공개로 전환됩니다. 계속할까요?`)
+        ) {
+          return;
+        }
+        await projectApi.changeVisibility(id, "PRIVATE", true);
+      } else {
+        await projectApi.changeVisibility(id, "PUBLIC", false);
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   if (isLoading) return <Centered>불러오는 중…</Centered>;
   if (isError || !p) return <Centered>니팅로그를 찾을 수 없습니다.</Centered>;
 
@@ -35,9 +58,19 @@ export default function ProjectDetailPage() {
             {" · "}{p.visibility === "PUBLIC" ? "공개" : "비공개"}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-          {STATUS_LABEL[p.status] ?? p.status}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+            {STATUS_LABEL[p.status] ?? p.status}
+          </span>
+          <button
+            type="button"
+            onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+            disabled={changeVisibility.isPending}
+            className="text-xs text-neutral-500 underline disabled:opacity-50"
+          >
+            {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+          </button>
+        </div>
       </div>
 
       {p.note && <p className="mt-4 whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{p.note}</p>}
@@ -95,11 +128,7 @@ export default function ProjectDetailPage() {
 
       {/* 오늘의 로그 */}
       <Section title="오늘의 로그">
-        <QuickLogForm projectId={id} currentStatus={p.status}
-          onDone={() => {
-            queryClient.invalidateQueries({ queryKey: ["project", id] });
-            queryClient.invalidateQueries({ queryKey: ["project", id, "logs"] });
-          }} />
+        <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility} onDone={invalidate} />
         <ul className="mt-4 divide-y divide-neutral-100 dark:divide-neutral-900">
           {(logs ?? []).map((l) => (
             <li key={l.id} className="py-3">
@@ -119,9 +148,20 @@ export default function ProjectDetailPage() {
   );
 }
 
-function QuickLogForm({ projectId, currentStatus, onDone }: { projectId: number; currentStatus: string; onDone: () => void }) {
+function QuickLogForm({
+  projectId,
+  currentStatus,
+  projectVisibility,
+  onDone,
+}: {
+  projectId: number;
+  currentStatus: string;
+  projectVisibility: string;
+  onDone: () => void;
+}) {
   const [status, setStatus] = useState("CO");
   const [comment, setComment] = useState("");
+  const [makePublic, setMakePublic] = useState(false);
 
   // 첫 로그 제안 CO, 이후는 현재 상태(POST-003)
   useEffect(() => {
@@ -129,28 +169,50 @@ function QuickLogForm({ projectId, currentStatus, onDone }: { projectId: number;
   }, [currentStatus]);
 
   const submit = useMutation({
-    mutationFn: () => projectApi.createLog(projectId, { knittingStatus: status, comment: comment.trim() || undefined }),
+    mutationFn: () => {
+      const body: Parameters<typeof projectApi.createLog>[1] = {
+        knittingStatus: status,
+        comment: comment.trim() || undefined,
+      };
+      if (makePublic) {
+        body.visibility = "PUBLIC";
+        // 비공개 니팅로그를 공개 로그로 올리면 니팅로그도 함께 공개된다 → 확인(POST-011)
+        if (projectVisibility === "PRIVATE") {
+          body.publishProjectConfirmed = window.confirm(
+            "이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?",
+          );
+        }
+      }
+      return projectApi.createLog(projectId, body);
+    },
     onSuccess: () => {
       setComment("");
+      setMakePublic(false);
       onDone();
     },
   });
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-md border border-neutral-200 p-3 dark:border-neutral-800 sm:flex-row sm:items-center"
+      className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800"
       onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}
     >
-      <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="상태"
-        className="rounded-md border border-neutral-300 bg-transparent px-2 py-2 text-sm dark:border-neutral-700">
-        {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-      </select>
-      <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="오늘의 기록 한 줄"
-        className="flex-1 rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700" />
-      <button type="submit" disabled={submit.isPending}
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
-        기록
-      </button>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="상태"
+          className="rounded-md border border-neutral-300 bg-transparent px-2 py-2 text-sm dark:border-neutral-700">
+          {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+        </select>
+        <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="오늘의 기록 한 줄"
+          className="flex-1 rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700" />
+        <button type="submit" disabled={submit.isPending}
+          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
+          기록
+        </button>
+      </div>
+      <label className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
+        <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
+        이 로그 공개
+      </label>
     </form>
   );
 }

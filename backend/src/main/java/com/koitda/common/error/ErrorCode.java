@@ -14,6 +14,7 @@ public enum ErrorCode {
 	ACCESS_DENIED(HttpStatus.FORBIDDEN),
 	PATTERN_NOT_FOUND(HttpStatus.NOT_FOUND),
 	PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND),
+	CONFIRMATION_REQUIRED(HttpStatus.valueOf(428)),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
 	private final HttpStatus status;

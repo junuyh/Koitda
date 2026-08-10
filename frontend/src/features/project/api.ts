@@ -71,6 +71,23 @@ export const projectApi = {
   create: (body: CreateProjectBody) =>
     apiFetch<{ id: number; displayTitle: string }>("/projects", { method: "POST", body }),
   logs: (projectId: number) => apiFetch<LogItem[]>(`/projects/${projectId}/posts`),
-  createLog: (projectId: number, body: { knittingStatus: string; comment?: string; logDate?: string; title?: string }) =>
-    apiFetch<{ projectStatus: string }>(`/projects/${projectId}/posts`, { method: "POST", body }),
+  createLog: (
+    projectId: number,
+    body: {
+      knittingStatus: string;
+      comment?: string;
+      logDate?: string;
+      title?: string;
+      visibility?: "PRIVATE" | "PUBLIC";
+      publishProjectConfirmed?: boolean;
+    },
+  ) => apiFetch<{ projectStatus: string; logVisibility: string; projectPublished: boolean }>(
+    `/projects/${projectId}/posts`, { method: "POST", body }),
+  visibilityImpact: (projectId: number, visibility: "PRIVATE" | "PUBLIC") =>
+    apiFetch<{ affectedPublicLogCount: number }>(`/projects/${projectId}/visibility-impact`, {
+      method: "POST",
+      body: { visibility },
+    }),
+  changeVisibility: (projectId: number, visibility: "PRIVATE" | "PUBLIC", confirmed: boolean) =>
+    apiFetch<null>(`/projects/${projectId}/visibility`, { method: "PATCH", body: { visibility, confirmed } }),
 };

@@ -1,10 +1,11 @@
 package com.koitda.post.dto;
 
-/** 로그 작성 결과 + 재계산된 니팅로그 상태(POST-007). */
+/** 로그 작성 결과. 상태 파생 결과와 공개 전파 결과를 함께 반환한다. */
 public record LogCreatedResponse(
 		Long id,
 		String displayTitle,
 		String knittingStatus,
-		String visibility,
-		String projectStatus) {
+		String logVisibility,
+		String projectStatus,
+		boolean projectPublished) {
 }

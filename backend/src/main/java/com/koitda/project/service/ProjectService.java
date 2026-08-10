@@ -14,8 +14,11 @@ import com.koitda.project.domain.ProjectYarn;
 import com.koitda.project.dto.CreateProjectRequest;
 import com.koitda.project.dto.ProjectCreatedResponse;
 import com.koitda.project.dto.ProjectDetailResponse;
+import com.koitda.post.domain.PostType;
+import com.koitda.post.repository.ContentPostRepository;
 import com.koitda.project.dto.ProjectGroupResponse;
 import com.koitda.project.dto.ProjectListItemResponse;
+import com.koitda.project.dto.VisibilityImpactResponse;
 import com.koitda.project.repository.ExternalPatternRepository;
 import com.koitda.project.repository.KnittingProjectRepository;
 import com.koitda.project.repository.ProjectGaugeRepository;
@@ -41,20 +44,63 @@ public class ProjectService {
 	private final ProjectYarnRepository yarnRepository;
 	private final ProjectNeedleRepository needleRepository;
 	private final ProjectGaugeRepository gaugeRepository;
+	private final ContentPostRepository contentPostRepository;
 	private final ObjectMapper objectMapper;
 
 	public ProjectService(KnittingProjectRepository projectRepository,
 			ExternalPatternRepository externalRepository,
 			SellingPatternRepository sellingPatternRepository,
 			ProjectYarnRepository yarnRepository, ProjectNeedleRepository needleRepository,
-			ProjectGaugeRepository gaugeRepository, ObjectMapper objectMapper) {
+			ProjectGaugeRepository gaugeRepository, ContentPostRepository contentPostRepository,
+			ObjectMapper objectMapper) {
 		this.projectRepository = projectRepository;
 		this.externalRepository = externalRepository;
 		this.sellingPatternRepository = sellingPatternRepository;
 		this.yarnRepository = yarnRepository;
 		this.needleRepository = needleRepository;
 		this.gaugeRepository = gaugeRepository;
+		this.contentPostRepository = contentPostRepository;
 		this.objectMapper = objectMapper;
+	}
+
+	/** 공개 변경 영향 조회(PROJECT-019) — 비공개 전환 시 함께 비공개될 공개 로그 수. */
+	@Transactional(readOnly = true)
+	public VisibilityImpactResponse visibilityImpact(Long userId, Long projectId, ProjectVisibility target) {
+		ownedProject(projectId, userId);
+		long affected = (target == ProjectVisibility.PRIVATE)
+				? contentPostRepository.countByProjectIdAndPostTypeAndVisibilityAndDeletedAtIsNull(
+						projectId, PostType.PROJECT_LOG, ProjectVisibility.PUBLIC)
+				: 0;
+		return new VisibilityImpactResponse(affected);
+	}
+
+	/** 니팅로그 공개 설정 변경. 비공개 전환은 하위 로그를 함께 비공개로 내린다(하향 전파, PROJECT-019). */
+	@Transactional
+	public void changeVisibility(Long userId, Long projectId, ProjectVisibility target, boolean confirmed) {
+		KnittingProject project = ownedProject(projectId, userId);
+		if (project.getVisibility() == target) {
+			return;
+		}
+		if (target == ProjectVisibility.PRIVATE) {
+			long affected = contentPostRepository.countByProjectIdAndPostTypeAndVisibilityAndDeletedAtIsNull(
+					projectId, PostType.PROJECT_LOG, ProjectVisibility.PUBLIC);
+			if (affected > 0 && !confirmed) {
+				throw new ApiException(ErrorCode.CONFIRMATION_REQUIRED,
+						"공개 중인 로그 " + affected + "개가 함께 비공개로 전환됩니다.");
+			}
+			contentPostRepository.makeProjectLogsPrivate(projectId);
+			project.makePrivate();
+		}
+		else {
+			project.publish();
+		}
+		projectRepository.save(project);
+	}
+
+	private KnittingProject ownedProject(Long projectId, Long userId) {
+		return projectRepository.findByIdAndDeletedAtIsNull(projectId)
+				.filter(p -> p.getUserId().equals(userId))
+				.orElseThrow(() -> new ApiException(ErrorCode.PROJECT_NOT_FOUND, "니팅로그를 찾을 수 없습니다."));
 	}
 
 	@Transactional

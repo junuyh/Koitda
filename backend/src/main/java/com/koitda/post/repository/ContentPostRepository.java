@@ -2,9 +2,13 @@ package com.koitda.post.repository;
 
 import com.koitda.post.domain.ContentPost;
 import com.koitda.post.domain.PostType;
+import com.koitda.project.domain.ProjectVisibility;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ContentPostRepository extends JpaRepository<ContentPost, Long> {
 
@@ -19,4 +23,17 @@ public interface ContentPostRepository extends JpaRepository<ContentPost, Long> 
 	/** 날짜 기반 로그 제목의 중복 순번 계산(POST-004). */
 	long countByProjectIdAndPostTypeAndDisplayTitleStartingWith(
 			Long projectId, PostType postType, String prefix);
+
+	/** 하향 전파 영향 조회 — 공개 로그 수. */
+	long countByProjectIdAndPostTypeAndVisibilityAndDeletedAtIsNull(
+			Long projectId, PostType postType, ProjectVisibility visibility);
+
+	/** 하향 전파 — 니팅로그의 공개 로그를 모두 비공개로(PROJECT-019). 영향 행 수 반환. */
+	@Modifying(clearAutomatically = true)
+	@Query("update ContentPost p set p.visibility = com.koitda.project.domain.ProjectVisibility.PRIVATE "
+			+ "where p.projectId = :projectId "
+			+ "and p.postType = com.koitda.post.domain.PostType.PROJECT_LOG "
+			+ "and p.deletedAt is null "
+			+ "and p.visibility = com.koitda.project.domain.ProjectVisibility.PUBLIC")
+	int makeProjectLogsPrivate(@Param("projectId") Long projectId);
 }

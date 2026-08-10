@@ -123,6 +123,20 @@ public class KnittingProject {
 		this.publicLogCount++;
 	}
 
+	/** 상향 전파 — 니팅로그를 공개로 전환(POST-011). */
+	public void publish() {
+		this.visibility = ProjectVisibility.PUBLIC;
+	}
+
+	/**
+	 * 하향 전파 — 비공개 전환(PROJECT-019). 공개 로그 수를 0으로 함께 내려
+	 * 공개 불변식(visibility=PUBLIC OR public_log_count=0)을 한 UPDATE 로 만족시킨다.
+	 */
+	public void makePrivate() {
+		this.visibility = ProjectVisibility.PRIVATE;
+		this.publicLogCount = 0;
+	}
+
 	@PrePersist
 	void onCreate() {
 		OffsetDateTime now = OffsetDateTime.now();
