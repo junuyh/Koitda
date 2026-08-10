@@ -113,6 +113,16 @@ public class KnittingProject {
 		return p;
 	}
 
+	/** 최신 로그에서 파생한 상태로 갱신(POST-007). 값이 같으면 호출측에서 저장을 생략할 수 있다. */
+	public void changeStatus(ProjectStatus status) {
+		this.status = status;
+	}
+
+	/** 공개 로그 수 증가. 공개 불변식은 DB CHECK 가 함께 지킨다. */
+	public void increasePublicLogCount() {
+		this.publicLogCount++;
+	}
+
 	@PrePersist
 	void onCreate() {
 		OffsetDateTime now = OffsetDateTime.now();
