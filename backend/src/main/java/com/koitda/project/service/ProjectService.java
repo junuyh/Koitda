@@ -14,6 +14,8 @@ import com.koitda.project.domain.ProjectYarn;
 import com.koitda.project.dto.CreateProjectRequest;
 import com.koitda.project.dto.ProjectCreatedResponse;
 import com.koitda.project.dto.ProjectDetailResponse;
+import com.koitda.project.dto.ProjectGroupResponse;
+import com.koitda.project.dto.ProjectListItemResponse;
 import com.koitda.project.repository.ExternalPatternRepository;
 import com.koitda.project.repository.KnittingProjectRepository;
 import com.koitda.project.repository.ProjectGaugeRepository;
@@ -81,6 +83,20 @@ public class ProjectService {
 		projectRepository.save(project);
 		saveMaterials(project.getId(), req);
 		return ProjectCreatedResponse.from(project);
+	}
+
+	/** 내 니팅로그 플랫 목록. */
+	@Transactional(readOnly = true)
+	public List<ProjectListItemResponse> myProjects(Long userId) {
+		return projectRepository.findMyProjects(userId).stream()
+				.map(ProjectListItemResponse::from).toList();
+	}
+
+	/** 코잇기 — 연결 도안 기준 그룹 목록. */
+	@Transactional(readOnly = true)
+	public List<ProjectGroupResponse> groupedByPattern(Long userId) {
+		return projectRepository.groupedByPattern(userId).stream()
+				.map(ProjectGroupResponse::from).toList();
 	}
 
 	@Transactional(readOnly = true)

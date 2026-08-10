@@ -108,6 +108,25 @@ class ProjectApiTest {
 	}
 
 	@Test
+	void 코잇기는_같은_도안의_니팅로그를_한_타래로_묶는다() throws Exception {
+		long patternId = seedApprovedPattern("타래도안");
+		MockHttpSession session = loginSession("proj-group@koitda.dev");
+		String body = "{\"connectionType\":\"CATALOG\",\"sellingPatternId\":" + patternId + "}";
+
+		for (int i = 0; i < 2; i++) {
+			mockMvc.perform(post("/api/v1/projects").with(csrf()).session(session)
+					.contentType(MediaType.APPLICATION_JSON).content(body))
+					.andExpect(status().isCreated());
+		}
+
+		mockMvc.perform(get("/api/v1/projects/grouped-by-pattern").session(session))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(1))
+				.andExpect(jsonPath("$[0].patternType").value("CATALOG"))
+				.andExpect(jsonPath("$[0].projectCount").value(2));
+	}
+
+	@Test
 	void 비로그인_생성은_401() throws Exception {
 		mockMvc.perform(post("/api/v1/projects").with(csrf())
 				.contentType(MediaType.APPLICATION_JSON)
