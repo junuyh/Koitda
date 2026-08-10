@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** 모든 컨트롤러 예외를 공통 형식(code·message·fieldErrors·traceId)으로 변환한다. */
 @RestControllerAdvice
@@ -32,6 +33,15 @@ public class GlobalExceptionHandler {
 		ErrorCode code = ErrorCode.VALIDATION_ERROR;
 		return ResponseEntity.status(code.status())
 				.body(new ApiErrorResponse(code.name(), "입력값이 올바르지 않습니다.", fieldErrors, newTraceId()));
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+		// 잘못된 쿼리 파라미터 값(예: craftType=SEWING) → 400
+		ErrorCode code = ErrorCode.VALIDATION_ERROR;
+		Map<String, String> fieldErrors = Map.of(ex.getName(), "허용되지 않는 값입니다.");
+		return ResponseEntity.status(code.status())
+				.body(new ApiErrorResponse(code.name(), "요청 파라미터가 올바르지 않습니다.", fieldErrors, newTraceId()));
 	}
 
 	@ExceptionHandler(Exception.class)
