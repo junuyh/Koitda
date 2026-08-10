@@ -23,7 +23,9 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 이미지는 마운트 지점이 /var/lib/postgresql (하위에 버전 디렉터리)로 바뀌었다.
+      # 과거 관례인 /var/lib/postgresql/data 로 마운트하면 컨테이너가 재시작을 반복한다.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       # 백엔드가 마이그레이션을 돌리기 전 DB가 준비됐는지 확인
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-koitda} -d ${POSTGRES_DB:-koitda}"]

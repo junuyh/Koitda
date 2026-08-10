@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -29,7 +30,11 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 				// SPA 대비 CSRF: 서버가 XSRF-TOKEN 쿠키를 내리고 클라이언트가 헤더로 되돌려준다.
-				.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+				// SpaCsrfTokenRequestHandler 로 쿠키의 원시 토큰을 헤더로 받아도 검증되게 한다.
+				.csrf(csrf -> csrf
+						.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+						.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+				.addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/csrf").permitAll()
