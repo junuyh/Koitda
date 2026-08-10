@@ -41,6 +41,12 @@ export default function HomePage() {
                 >
                   도안 둘러보기
                 </Link>
+                <Link
+                  href="/projects"
+                  className="rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                >
+                  내 니팅로그
+                </Link>
                 <button
                   type="button"
                   onClick={() => logout.mutate()}

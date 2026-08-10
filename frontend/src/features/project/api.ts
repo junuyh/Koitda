@@ -1,0 +1,76 @@
+import { apiFetch } from "@/lib/api";
+
+export type ProjectListItem = {
+  id: number;
+  displayTitle: string;
+  status: string;
+  visibility: string;
+  patternTitle: string | null;
+  patternType: string;
+  createdAt: string;
+};
+
+export type MaterialGauge = { stitches: number; rows: number; needleSizeMm: number | null; measuredStage: string | null };
+
+export type ProjectDetail = {
+  id: number;
+  title: string | null;
+  displayTitle: string;
+  status: string;
+  visibility: string;
+  publicLogCount: number;
+  note: string | null;
+  createdAt: string;
+  patternType: string;
+  sellingPatternId: number | null;
+  externalPatternId: number | null;
+  patternSnapshot: {
+    title?: string;
+    designerName?: string;
+    gauge?: { stitches?: number; rows?: number; needleSizeMm?: number };
+    sizes?: Array<{ label: string; castOnStitches: number; measurements: Record<string, number> }>;
+  } | null;
+  external: { title: string; creatorName: string | null } | null;
+  yarns: Array<{ brand: string | null; yarnName: string | null; color: string | null; amount: string | null; unit: string | null; note: string | null }>;
+  needles: Array<{ needleType: string | null; sizeMm: number | null; lengthCm: number | null; note: string | null }>;
+  gauges: MaterialGauge[];
+};
+
+export type LogItem = {
+  id: number;
+  displayTitle: string;
+  knittingStatus: string | null;
+  logDate: string;
+  visibility: string;
+  comment: string | null;
+};
+
+export type CreateProjectBody = {
+  connectionType: "CATALOG" | "EXTERNAL";
+  sellingPatternId?: number;
+  externalPattern?: { title: string; creatorName?: string };
+  title?: string;
+  note?: string;
+  visibility?: "PRIVATE" | "PUBLIC";
+  yarns?: Array<{ brand?: string; yarnName?: string; color?: string; amount?: string; unit?: string }>;
+  needles?: Array<{ needleType?: string; sizeMm?: number; lengthCm?: number }>;
+  gauges?: Array<{ stitches?: number; rows?: number; needleSizeMm?: number; measuredStage?: string }>;
+};
+
+export const STATUS_LABEL: Record<string, string> = {
+  PLANNED: "준비 중",
+  CO: "코잡기",
+  WIP: "뜨는 중",
+  UFO: "잠시 멈춤",
+  FO: "완성",
+};
+
+export const projectApi = {
+  mine: () => apiFetch<ProjectListItem[]>("/projects/mine"),
+  get: (id: number) => apiFetch<ProjectDetail>(`/projects/${id}`),
+  create: (body: CreateProjectBody) =>
+    apiFetch<{ id: number; displayTitle: string }>("/projects", { method: "POST", body }),
+  logs: (projectId: number) => apiFetch<LogItem[]>(`/projects/${projectId}/posts`),
+  createLog: (projectId: number, body: { knittingStatus: string; comment?: string; logDate?: string; title?: string }) =>
+    apiFetch<{ projectStatus: string }>(`/projects/${projectId}/posts`, { method: "POST", body }),
+};

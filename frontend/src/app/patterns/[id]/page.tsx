@@ -76,7 +76,7 @@ export default function PatternDetailPage() {
             <Meta label="공개 니팅로그" value={`${p.publicProjectCount}`} />
           </dl>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => {
@@ -89,6 +89,12 @@ export default function PatternDetailPage() {
             >
               {p.wished ? "♥ 위시 담김" : "♡ 위시 담기"}
             </button>
+            <Link
+              href={me ? `/projects/new?sellingPatternId=${p.id}` : "/login"}
+              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+            >
+              니팅로그 만들기
+            </Link>
           </div>
         </div>
       </div>
