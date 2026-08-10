@@ -1,0 +1,175 @@
+package com.koitda.project.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+/**
+ * 니팅로그(ERD KNITTING_PROJECT). 도안 XOR 외부도안, 상태는 최신 로그 파생 캐시.
+ * pattern_snapshot 은 연결 시점 원작 정보의 복사본(외부도안이면 null).
+ */
+@Entity
+@Table(name = "knitting_project")
+public class KnittingProject {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@Column(name = "user_id", nullable = false)
+	private Long userId;
+
+	@Column(name = "selling_pattern_id")
+	private Long sellingPatternId;
+
+	@Column(name = "external_pattern_id")
+	private Long externalPatternId;
+
+	@Column(name = "title")
+	private String title;
+
+	@Column(name = "display_title", nullable = false)
+	private String displayTitle;
+
+	@Column(name = "title_sequence")
+	private Integer titleSequence;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false)
+	private ProjectStatus status = ProjectStatus.PLANNED;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "visibility", nullable = false)
+	private ProjectVisibility visibility = ProjectVisibility.PRIVATE;
+
+	@Column(name = "public_log_count", nullable = false)
+	private int publicLogCount = 0;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "pattern_snapshot")
+	private String patternSnapshot;
+
+	@Column(name = "pattern_version_no")
+	private Integer patternVersionNo;
+
+	@Column(name = "snapshot_at")
+	private OffsetDateTime snapshotAt;
+
+	@Column(name = "note")
+	private String note;
+
+	@Column(name = "created_at", nullable = false, updatable = false)
+	private OffsetDateTime createdAt;
+
+	@Column(name = "updated_at", nullable = false)
+	private OffsetDateTime updatedAt;
+
+	@Column(name = "deleted_at")
+	private OffsetDateTime deletedAt;
+
+	@Column(name = "purge_at")
+	private OffsetDateTime purgeAt;
+
+	protected KnittingProject() {
+	}
+
+	private KnittingProject(Long userId, String title, String displayTitle, Integer titleSequence,
+			ProjectVisibility visibility, String note) {
+		this.userId = userId;
+		this.title = title;
+		this.displayTitle = displayTitle;
+		this.titleSequence = titleSequence;
+		this.visibility = visibility;
+		this.note = note;
+	}
+
+	/** 판매/구매 도안 연결 — 원작 정보 스냅샷을 복사해 저장한다(PROJECT-017). */
+	public static KnittingProject forCatalog(Long userId, Long sellingPatternId, String title,
+			String displayTitle, Integer titleSequence, ProjectVisibility visibility, String note,
+			String patternSnapshot, Integer patternVersionNo) {
+		KnittingProject p = new KnittingProject(userId, title, displayTitle, titleSequence, visibility, note);
+		p.sellingPatternId = sellingPatternId;
+		p.patternSnapshot = patternSnapshot;
+		p.patternVersionNo = patternVersionNo;
+		p.snapshotAt = OffsetDateTime.now();
+		return p;
+	}
+
+	/** 외부 도안 연결 — 스냅샷을 만들지 않는다. */
+	public static KnittingProject forExternal(Long userId, Long externalPatternId, String title,
+			String displayTitle, Integer titleSequence, ProjectVisibility visibility, String note) {
+		KnittingProject p = new KnittingProject(userId, title, displayTitle, titleSequence, visibility, note);
+		p.externalPatternId = externalPatternId;
+		return p;
+	}
+
+	@PrePersist
+	void onCreate() {
+		OffsetDateTime now = OffsetDateTime.now();
+		this.createdAt = now;
+		this.updatedAt = now;
+	}
+
+	@PreUpdate
+	void onUpdate() {
+		this.updatedAt = OffsetDateTime.now();
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public Long getUserId() {
+		return userId;
+	}
+
+	public Long getSellingPatternId() {
+		return sellingPatternId;
+	}
+
+	public Long getExternalPatternId() {
+		return externalPatternId;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public String getDisplayTitle() {
+		return displayTitle;
+	}
+
+	public ProjectStatus getStatus() {
+		return status;
+	}
+
+	public ProjectVisibility getVisibility() {
+		return visibility;
+	}
+
+	public int getPublicLogCount() {
+		return publicLogCount;
+	}
+
+	public String getPatternSnapshot() {
+		return patternSnapshot;
+	}
+
+	public String getNote() {
+		return note;
+	}
+
+	public OffsetDateTime getCreatedAt() {
+		return createdAt;
+	}
+}
