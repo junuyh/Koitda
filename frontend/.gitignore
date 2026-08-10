@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.example 은 커밋 대상으로 유지 (.env* 전체 무시에서 예외)
+!.env.example
+!.env.*.example
 
 # vercel
 .vercel

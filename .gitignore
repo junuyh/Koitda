@@ -24,3 +24,38 @@ dist/
 
 # 로그
 *.log
+logs/
+
+# 임시·캐시
+tmp/
+temp/
+.cache/
+coverage/
+
+# OS (Windows)
+Thumbs.db
+
+# 인증서·개인키 (공개 인증서를 커밋해야 하면 git add -f 로 개별 강제 추가)
+*.pem
+*.key
+*.p12
+*.p8
+*.jks
+*.keystore
+*.crt
+
+# 서비스 계정·자격증명 (일반 JSON 은 무시하지 않고, 위험 패턴만 지정)
+**/firebase-adminsdk*.json
+**/service-account*.json
+**/serviceAccount*.json
+**/*serviceAccountKey*.json
+**/gcp-key*.json
+credentials.json
+
+# DB 덤프·백업 (마이그레이션/스키마 *.sql 은 소스이므로 무시하지 않는다)
+*.dump
+*.sql.backup
+*.sql.bak
+
+# Gradle wrapper jar 은 반드시 커밋 (위 *.jar 규칙의 예외)
+!**/gradle/wrapper/gradle-wrapper.jar
