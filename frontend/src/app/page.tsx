@@ -47,6 +47,20 @@ export default function HomePage() {
                 >
                   내 니팅로그
                 </Link>
+                <Link
+                  href="/library"
+                  className="rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                >
+                  구매 도안
+                </Link>
+                {!me.roles.includes("SELLER") && (
+                  <Link
+                    href="/seller/apply"
+                    className="rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                  >
+                    판매자 신청
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => logout.mutate()}

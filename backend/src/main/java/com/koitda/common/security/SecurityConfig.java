@@ -42,11 +42,15 @@ public class SecurityConfig {
 						// 카탈로그 조회는 비로그인도 허용(위시·내정보 등 나머지는 인증 필요)
 						.requestMatchers(HttpMethod.GET, "/api/v1/patterns", "/api/v1/patterns/*",
 								"/api/v1/pattern-categories").permitAll()
+						.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 						.anyRequest().authenticated())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-				// 폼 로그인 리다이렉트 대신 API 답게 401 JSON 을 돌려준다.
-				.exceptionHandling(eh -> eh.authenticationEntryPoint((request, response, ex) ->
-						writeError(response, ErrorCode.UNAUTHENTICATED, "로그인이 필요합니다.")))
+				// 폼 로그인 리다이렉트 대신 API 답게 401/403 JSON 을 돌려준다.
+				.exceptionHandling(eh -> eh
+						.authenticationEntryPoint((request, response, ex) ->
+								writeError(response, ErrorCode.UNAUTHENTICATED, "로그인이 필요합니다."))
+						.accessDeniedHandler((request, response, ex) ->
+								writeError(response, ErrorCode.ACCESS_DENIED, "권한이 없습니다.")))
 				.logout(logout -> logout
 						.logoutUrl("/api/v1/auth/logout")
 						.logoutSuccessHandler((request, response, authentication) ->
