@@ -125,4 +125,20 @@ public class ContentPost {
 	public ProjectVisibility getVisibility() {
 		return visibility;
 	}
+
+	public Long getUserId() {
+		return userId;
+	}
+
+	public Long getProjectId() {
+		return projectId;
+	}
+
+	public PostType getPostType() {
+		return postType;
+	}
+
+	public String getTitle() {
+		return title;
+	}
 }

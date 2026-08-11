@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { authApi } from "@/features/auth/api";
 import { patternApi } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
+import { ReviewSection } from "@/features/review/ReviewSection";
 import { ApiError } from "@/lib/api";
 
 const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
@@ -140,20 +141,20 @@ export default function PatternDetailPage() {
         </div>
       </div>
 
-      {/* 게이지 */}
-      {p.gaugeInfo && (
-        <Section title="게이지">
+      {/* 게이지 — 모든 도안 통일 표시(미등록도 항목 노출) */}
+      <Section title="게이지">
+        {p.gaugeInfo ? (
           <p className="text-sm text-neutral-700 dark:text-neutral-300">
             {p.gaugeInfo.stitches}코 × {p.gaugeInfo.rows}단
             {p.gaugeInfo.swatchWidthCm && ` (${p.gaugeInfo.swatchWidthCm}×${p.gaugeInfo.swatchHeightCm}cm)`}
             {p.gaugeInfo.needleSizeMm && ` · 바늘 ${p.gaugeInfo.needleSizeMm}mm`}
           </p>
-        </Section>
-      )}
+        ) : <Empty />}
+      </Section>
 
       {/* 사이즈별 시작 콧수·완성 실측 */}
-      {p.sizeInfo && p.sizeInfo.sizes.length > 0 && (
-        <Section title="사이즈">
+      <Section title="사이즈">
+        {p.sizeInfo && p.sizeInfo.sizes.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
@@ -178,17 +179,19 @@ export default function PatternDetailPage() {
               </tbody>
             </table>
           </div>
-        </Section>
-      )}
+        ) : <Empty />}
+      </Section>
 
-      {p.yarnRequirement && (
-        <Section title="실 소요량"><p className="text-sm">{p.yarnRequirement}</p></Section>
-      )}
-      {p.description && (
-        <Section title="상세 설명">
+      <Section title="실 소요량">
+        {p.yarnRequirement ? <p className="text-sm">{p.yarnRequirement}</p> : <Empty />}
+      </Section>
+
+      <Section title="상세 설명">
+        {p.description ? (
           <p className="whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{p.description}</p>
-        </Section>
-      )}
+        ) : <Empty />}
+      </Section>
+
       {p.referenceVideoUrl && (
         <Section title="참고 영상">
           <a href={p.referenceVideoUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
@@ -196,12 +199,18 @@ export default function PatternDetailPage() {
           </a>
         </Section>
       )}
+
+      <ReviewSection patternId={id} loggedIn={!!me} />
     </main>
   );
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <main className="flex flex-1 items-center justify-center py-16 text-sm text-neutral-400">{children}</main>;
+}
+
+function Empty() {
+  return <p className="text-sm text-neutral-400">미등록</p>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

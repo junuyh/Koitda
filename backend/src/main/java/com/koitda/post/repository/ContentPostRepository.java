@@ -16,6 +16,26 @@ public interface ContentPostRepository extends JpaRepository<ContentPost, Long> 
 	Optional<ContentPost> findFirstByProjectIdAndPostTypeAndDeletedAtIsNullOrderByLogDateDescCreatedAtDesc(
 			Long projectId, PostType postType);
 
+	/**
+	 * 리뷰 불러오기 후보(REVIEW-005) — 해당 도안에 연결된 본인 니팅로그의 오늘의 로그.
+	 * 비공개 로그도 불러올 수 있으므로 visibility 는 조건에 넣지 않는다.
+	 */
+	@Query(value = """
+			SELECT p.id             AS id,
+			       p.display_title  AS displayTitle,
+			       p.log_date       AS logDate,
+			       p.knitting_status AS knittingStatus,
+			       p.project_id     AS projectId
+			FROM content_post p
+			JOIN knitting_project kp ON kp.id = p.project_id
+			WHERE p.user_id = :userId
+			  AND kp.selling_pattern_id = :patternId
+			  AND p.post_type = 'PROJECT_LOG'
+			  AND p.deleted_at IS NULL
+			ORDER BY p.log_date DESC NULLS LAST, p.created_at DESC
+			""", nativeQuery = true)
+	List<LoadableLogView> findLoadableLogs(@Param("userId") Long userId, @Param("patternId") Long patternId);
+
 	/** 로그 목록 — 기록일 내림차순(POST-012). */
 	List<ContentPost> findByProjectIdAndPostTypeAndDeletedAtIsNullOrderByLogDateDescCreatedAtDesc(
 			Long projectId, PostType postType);
