@@ -62,6 +62,10 @@ public class ProjectGauge {
 		this.sortOrder = sortOrder;
 	}
 
+	public Long getId() {
+		return id;
+	}
+
 	public BigDecimal getStitches() {
 		return stitches;
 	}

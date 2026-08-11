@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { projectApi, STATUS_LABEL } from "@/features/project/api";
+import { gaugeApi } from "@/features/gauge/api";
 
 const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
 
@@ -16,6 +17,11 @@ export default function ProjectDetailPage() {
 
   const { data: p, isLoading, isError } = useQuery({ queryKey: ["project", id], queryFn: () => projectApi.get(id) });
   const { data: logs } = useQuery({ queryKey: ["project", id, "logs"], queryFn: () => projectApi.logs(id) });
+  const { data: appliedGauge } = useQuery({
+    queryKey: ["gauge-applied", id],
+    queryFn: () => gaugeApi.applied(id),
+    retry: false,
+  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["project", id] });
@@ -145,6 +151,31 @@ export default function ProjectDetailPage() {
               <li key={i}>{g.stitches}코 × {g.rows}단{g.needleSizeMm ? ` · ${g.needleSizeMm}mm` : ""}</li>
             ))}
           </ul>
+        </Section>
+      )}
+
+      {/* 게이지 계산 (GAUGE-001·013) — 도안 연결 니팅로그에서 진입 */}
+      {p.patternType !== "EXTERNAL" && (
+        <Section title="게이지 계산">
+          {appliedGauge ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm">
+                <p>조정 시작 콧수 <span className="font-semibold">{appliedGauge.adjustedCastOnStitches}코</span></p>
+                {appliedGauge.adjustmentSummary && (
+                  <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">조정: {appliedGauge.adjustmentSummary}</p>
+                )}
+              </div>
+              <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs text-neutral-500 underline">다시 계산</Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-neutral-500">내 게이지 기준으로 조정 콧수·부위별 필요 콧수를 계산해 보세요.</p>
+              <Link href={`/projects/${id}/gauge`}
+                className="shrink-0 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+                게이지 계산
+              </Link>
+            </div>
+          )}
         </Section>
       )}
 
