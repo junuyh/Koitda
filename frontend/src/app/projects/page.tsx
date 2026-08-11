@@ -11,12 +11,15 @@ export default function MyProjectsPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">내 니팅로그</h1>
-        <Link
-          href="/projects/new"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
-        >
-          니팅로그 만들기
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/projects/trash" className="text-sm text-neutral-500 hover:underline">휴지통</Link>
+          <Link
+            href="/projects/new"
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+          >
+            니팅로그 만들기
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (

@@ -36,4 +36,17 @@ public interface ContentPostRepository extends JpaRepository<ContentPost, Long> 
 			+ "and p.deletedAt is null "
 			+ "and p.visibility = com.koitda.project.domain.ProjectVisibility.PUBLIC")
 	int makeProjectLogsPrivate(@Param("projectId") Long projectId);
+
+	/** 니팅로그 휴지통 이동 시 연결 로그를 함께 논리 삭제(PROJECT-016). 삭제된 로그 수 반환. */
+	@Modifying(clearAutomatically = true)
+	@Query("update ContentPost p set p.deletedAt = :ts, p.purgeAt = :purgeAt "
+			+ "where p.projectId = :projectId and p.deletedAt is null")
+	int softDeleteByProject(@Param("projectId") Long projectId,
+			@Param("ts") java.time.OffsetDateTime ts, @Param("purgeAt") java.time.OffsetDateTime purgeAt);
+
+	/** 복구 시 연결 로그도 함께 복구. */
+	@Modifying(clearAutomatically = true)
+	@Query("update ContentPost p set p.deletedAt = null, p.purgeAt = null "
+			+ "where p.projectId = :projectId and p.deletedAt is not null")
+	int restoreByProject(@Param("projectId") Long projectId);
 }

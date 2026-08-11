@@ -137,6 +137,27 @@ public class KnittingProject {
 		this.publicLogCount = 0;
 	}
 
+	/** 휴지통 이동(논리 삭제) — 90일 뒤 완전 삭제 예정 시각을 함께 기록(DATA-003). */
+	public void moveToTrash() {
+		OffsetDateTime now = OffsetDateTime.now();
+		this.deletedAt = now;
+		this.purgeAt = now.plusDays(90);
+	}
+
+	/** 복구 — 삭제·완전삭제 예정 시각을 지운다. */
+	public void restore() {
+		this.deletedAt = null;
+		this.purgeAt = null;
+	}
+
+	public OffsetDateTime getDeletedAt() {
+		return deletedAt;
+	}
+
+	public OffsetDateTime getPurgeAt() {
+		return purgeAt;
+	}
+
 	@PrePersist
 	void onCreate() {
 		OffsetDateTime now = OffsetDateTime.now();

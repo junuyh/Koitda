@@ -18,7 +18,10 @@ import com.koitda.post.domain.PostType;
 import com.koitda.post.repository.ContentPostRepository;
 import com.koitda.project.dto.ProjectGroupResponse;
 import com.koitda.project.dto.ProjectListItemResponse;
+import com.koitda.project.dto.ProjectTrashDtos.TrashItemResponse;
+import com.koitda.project.dto.ProjectTrashDtos.TrashResult;
 import com.koitda.project.dto.VisibilityImpactResponse;
+import java.time.OffsetDateTime;
 import com.koitda.project.repository.ExternalPatternRepository;
 import com.koitda.project.repository.KnittingProjectRepository;
 import com.koitda.project.repository.ProjectGaugeRepository;
@@ -101,6 +104,54 @@ public class ProjectService {
 		return projectRepository.findByIdAndDeletedAtIsNull(projectId)
 				.filter(p -> p.getUserId().equals(userId))
 				.orElseThrow(() -> new ApiException(ErrorCode.PROJECT_NOT_FOUND, "니팅로그를 찾을 수 없습니다."));
+	}
+
+	private KnittingProject ownedTrashedProject(Long projectId, Long userId) {
+		return projectRepository.findByIdAndUserId(projectId, userId)
+				.filter(p -> p.getDeletedAt() != null)
+				.orElseThrow(() -> new ApiException(ErrorCode.PROJECT_NOT_FOUND, "휴지통에서 찾을 수 없습니다."));
+	}
+
+	// ---- 휴지통(⑨) ----
+
+	/** 휴지통 이동 — 연결 로그도 함께 논리 삭제(PROJECT-016, DATA-003). */
+	@Transactional
+	public TrashResult moveToTrash(Long userId, Long projectId) {
+		KnittingProject project = ownedProject(projectId, userId);
+		project.moveToTrash();
+		int logCount = contentPostRepository.softDeleteByProject(projectId, project.getDeletedAt(), project.getPurgeAt());
+		projectRepository.save(project);
+		return new TrashResult(logCount, project.getPurgeAt());
+	}
+
+	/** 복구 — 니팅로그와 연결 로그를 되살린다. */
+	@Transactional
+	public void restore(Long userId, Long projectId) {
+		KnittingProject project = ownedTrashedProject(projectId, userId);
+		project.restore();
+		contentPostRepository.restoreByProject(projectId);
+		projectRepository.save(project);
+	}
+
+	/** 완전 삭제 — FK ON DELETE CASCADE 로 연결 로그·재료도 함께 제거된다. */
+	@Transactional
+	public void permanentDelete(Long userId, Long projectId) {
+		KnittingProject project = ownedTrashedProject(projectId, userId);
+		projectRepository.delete(project);
+	}
+
+	@Transactional(readOnly = true)
+	public List<TrashItemResponse> trashList(Long userId) {
+		return projectRepository.findByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(userId).stream()
+				.map(TrashItemResponse::from).toList();
+	}
+
+	/** 90일 경과 항목 완전 삭제(배치). 삭제 건수 반환. */
+	@Transactional
+	public int purgeExpired() {
+		List<KnittingProject> expired = projectRepository.findByPurgeAtBefore(OffsetDateTime.now());
+		projectRepository.deleteAll(expired);
+		return expired.size();
 	}
 
 	@Transactional

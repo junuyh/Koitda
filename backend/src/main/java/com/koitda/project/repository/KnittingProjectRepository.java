@@ -14,6 +14,14 @@ public interface KnittingProjectRepository extends JpaRepository<KnittingProject
 
 	Optional<KnittingProject> findByIdAndDeletedAtIsNull(Long id);
 
+	Optional<KnittingProject> findByIdAndUserId(Long id, Long userId);
+
+	/** 휴지통 목록 — 최근 삭제순. */
+	List<KnittingProject> findByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(Long userId);
+
+	/** 90일 경과(완전 삭제 대상) 조회. */
+	List<KnittingProject> findByPurgeAtBefore(java.time.OffsetDateTime threshold);
+
 	/** 코잇기 — 연결 도안 기준으로 니팅로그를 묶는다(PROJECT-002·013). 최근 활동순. */
 	@Query(value = """
 			SELECT COALESCE(sp.title, ep.title) AS patternTitle,

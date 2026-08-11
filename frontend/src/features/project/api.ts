@@ -36,6 +36,14 @@ export type ProjectDetail = {
   gauges: MaterialGauge[];
 };
 
+export type TrashItem = {
+  id: number;
+  displayTitle: string;
+  deletedAt: string;
+  purgeAt: string;
+  remainingDays: number;
+};
+
 export type LogItem = {
   id: number;
   displayTitle: string;
@@ -90,4 +98,10 @@ export const projectApi = {
     }),
   changeVisibility: (projectId: number, visibility: "PRIVATE" | "PUBLIC", confirmed: boolean) =>
     apiFetch<null>(`/projects/${projectId}/visibility`, { method: "PATCH", body: { visibility, confirmed } }),
+  moveToTrash: (projectId: number) =>
+    apiFetch<{ connectedLogCount: number; purgeAt: string }>(`/projects/${projectId}`, { method: "DELETE" }),
+  trash: () => apiFetch<TrashItem[]>("/projects/trash"),
+  restore: (projectId: number) => apiFetch<null>(`/projects/${projectId}/restore`, { method: "POST" }),
+  permanentDelete: (projectId: number) =>
+    apiFetch<null>(`/projects/${projectId}/permanent`, { method: "DELETE" }),
 };

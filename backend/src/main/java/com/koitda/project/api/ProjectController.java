@@ -7,12 +7,15 @@ import com.koitda.project.dto.ProjectDetailResponse;
 import com.koitda.project.dto.ChangeVisibilityRequest;
 import com.koitda.project.dto.ProjectGroupResponse;
 import com.koitda.project.dto.ProjectListItemResponse;
+import com.koitda.project.dto.ProjectTrashDtos.TrashItemResponse;
+import com.koitda.project.dto.ProjectTrashDtos.TrashResult;
 import com.koitda.project.dto.VisibilityImpactResponse;
 import com.koitda.project.service.ProjectService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +47,33 @@ public class ProjectController {
 	@GetMapping("/mine")
 	public List<ProjectListItemResponse> mine(@AuthenticationPrincipal CustomUserDetails principal) {
 		return projectService.myProjects(principal.getUserId());
+	}
+
+	/** 휴지통 목록(DATA-003). */
+	@GetMapping("/trash")
+	public List<TrashItemResponse> trash(@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.trashList(principal.getUserId());
+	}
+
+	/** 휴지통 이동(PROJECT-016) — 연결 로그도 함께. */
+	@DeleteMapping("/{projectId}")
+	public TrashResult moveToTrash(@PathVariable Long projectId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.moveToTrash(principal.getUserId(), projectId);
+	}
+
+	/** 복구. */
+	@PostMapping("/{projectId}/restore")
+	public void restore(@PathVariable Long projectId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		projectService.restore(principal.getUserId(), projectId);
+	}
+
+	/** 완전 삭제. */
+	@DeleteMapping("/{projectId}/permanent")
+	public void permanentDelete(@PathVariable Long projectId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		projectService.permanentDelete(principal.getUserId(), projectId);
 	}
 
 	/** 코잇기 — 도안 타래(연결 도안별 그룹) 목록(PROJECT-001·002·013). */

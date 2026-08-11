@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { projectApi, STATUS_LABEL } from "@/features/project/api";
 
@@ -11,6 +11,7 @@ const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data: p, isLoading, isError } = useQuery({ queryKey: ["project", id], queryFn: () => projectApi.get(id) });
@@ -37,6 +38,15 @@ export default function ProjectDetailPage() {
       }
     },
     onSuccess: invalidate,
+  });
+
+  const trash = useMutation({
+    mutationFn: () => projectApi.moveToTrash(id),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", "mine"] });
+      window.alert(`휴지통으로 옮겼습니다. 연결 로그 ${res.connectedLogCount}개도 함께 이동했으며, 90일 뒤 완전 삭제됩니다.`);
+      router.push("/projects");
+    },
   });
 
   if (isLoading) return <Centered>불러오는 중…</Centered>;
@@ -69,6 +79,18 @@ export default function ProjectDetailPage() {
             className="text-xs text-neutral-500 underline disabled:opacity-50"
           >
             {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) {
+                trash.mutate();
+              }
+            }}
+            disabled={trash.isPending}
+            className="text-xs text-red-500 underline disabled:opacity-50"
+          >
+            삭제
           </button>
         </div>
       </div>
