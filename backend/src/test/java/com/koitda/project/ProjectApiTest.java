@@ -124,6 +124,12 @@ class ProjectApiTest {
 				.andExpect(jsonPath("$.length()").value(1))
 				.andExpect(jsonPath("$[0].patternType").value("CATALOG"))
 				.andExpect(jsonPath("$[0].projectCount").value(2));
+
+		// 내 니팅로그 플랫 목록(네이티브 투영 — 날짜 매핑 회귀 방지)
+		mockMvc.perform(get("/api/v1/projects/mine").session(session))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].createdAt").isNotEmpty());
 	}
 
 	@Test

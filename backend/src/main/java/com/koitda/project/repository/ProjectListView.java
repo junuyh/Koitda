@@ -1,8 +1,8 @@
 package com.koitda.project.repository;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
-/** 내 니팅로그 플랫 목록 투영. */
+/** 내 니팅로그 플랫 목록 투영. 네이티브 조회는 TIMESTAMPTZ 를 Instant 로 준다. */
 public interface ProjectListView {
 	Long getId();
 
@@ -16,5 +16,5 @@ public interface ProjectListView {
 
 	Long getExternalPatternId();
 
-	OffsetDateTime getCreatedAt();
+	Instant getCreatedAt();
 }

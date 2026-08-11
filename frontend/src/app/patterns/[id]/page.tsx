@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { authApi } from "@/features/auth/api";
 import { patternApi } from "@/features/pattern/api";
+import { orderApi } from "@/features/order/api";
+import { ApiError } from "@/lib/api";
 
 const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
 const MEASURE_LABEL: Record<string, string> = {
@@ -29,6 +31,25 @@ export default function PatternDetailPage() {
   const wish = useMutation({
     mutationFn: () => (p?.wished ? patternApi.removeWish(id) : patternApi.addWish(id)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pattern", id] }),
+  });
+
+  const { data: purchasability } = useQuery({
+    queryKey: ["purchasability", id],
+    queryFn: () => orderApi.purchasability(id),
+    enabled: !!me,
+  });
+
+  // 데모: 주문 생성 후 곧바로 결제 완료 처리한다.
+  const purchase = useMutation({
+    mutationFn: async () => {
+      const order = await orderApi.createOrder(id);
+      await orderApi.completePayment(order.id);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["purchasability", id] });
+      router.push("/library");
+    },
+    onError: (e) => window.alert(e instanceof ApiError ? e.message : "구매 처리 중 오류가 발생했습니다."),
   });
 
   if (isLoading) return <Centered>불러오는 중…</Centered>;
@@ -91,10 +112,30 @@ export default function PatternDetailPage() {
             </button>
             <Link
               href={me ? `/projects/new?sellingPatternId=${p.id}` : "/login"}
-              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+              className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
             >
               니팅로그 만들기
             </Link>
+
+            {/* 구매 상태별 버튼(ORDER-005) */}
+            {!me ? (
+              <Link href="/login" className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+                로그인 후 구매
+              </Link>
+            ) : purchasability && !purchasability.canPurchase && purchasability.reason?.includes("보유") ? (
+              <Link href="/library" className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700">
+                구매 도안 보기
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => purchase.mutate()}
+                disabled={purchase.isPending || !purchasability?.canPurchase}
+                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+              >
+                {purchase.isPending ? "구매 중…" : `구매하기${p.salePrice != null ? ` · ${p.salePrice.toLocaleString()}원` : ""}`}
+              </button>
+            )}
           </div>
         </div>
       </div>
