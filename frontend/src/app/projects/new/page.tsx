@@ -196,7 +196,7 @@ function NewProjectForm() {
 }
 
 const inputClass =
-  "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100";
+  "w-full rounded-lg border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm outline-none dark:border-neutral-100";
 
 function upd<T extends Record<string, string>>(rows: T[], i: number, key: keyof T, value: string): T[] {
   return rows.map((r, idx) => (idx === i ? { ...r, [key]: value } : r));
@@ -205,7 +205,7 @@ function upd<T extends Record<string, string>>(rows: T[], i: number, key: keyof 
 function TypeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-sm ${active ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "border border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"}`}>
+      className={`rounded-full border-2 border-neutral-900 px-4 py-1.5 text-sm dark:border-neutral-100 ${active ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "text-neutral-700 dark:text-neutral-200"}`}>
       {children}
     </button>
   );
@@ -213,10 +213,10 @@ function TypeButton({ active, onClick, children }: { active: boolean; onClick: (
 
 function Section({ title, onAdd, children }: { title: string; onAdd?: () => void; children: React.ReactNode }) {
   return (
-    <section>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {onAdd && <button type="button" onClick={onAdd} className="text-xs text-neutral-500 hover:underline">+ 행 추가</button>}
+    <section className="rounded-[22px] border-2 border-neutral-900 bg-white p-5 dark:border-neutral-100 dark:bg-neutral-950">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">{title}</h2>
+        {onAdd && <button type="button" onClick={onAdd} className="rounded-full border border-neutral-400 px-2.5 py-0.5 text-xs text-neutral-500 hover:border-neutral-900 hover:text-neutral-900 dark:hover:border-neutral-100 dark:hover:text-neutral-100">+ 행 추가</button>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>

@@ -64,15 +64,17 @@ export default function PatternDetailPage() {
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
       <Link href="/patterns" className="text-sm text-neutral-500 hover:underline">← 목록</Link>
 
-      <div className="mt-4 grid gap-8 md:grid-cols-2">
+      <div className="mt-4 grid gap-6 rounded-2xl border border-neutral-200 bg-white p-5 md:grid-cols-2 dark:border-neutral-800 dark:bg-neutral-950">
         {/* 대표 이미지 자리 */}
-        <div className="flex aspect-square items-center justify-center rounded-lg bg-neutral-100 text-5xl font-semibold text-neutral-300 dark:bg-neutral-900">
+        <div className="flex aspect-square items-center justify-center rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200 text-6xl font-bold text-neutral-300 dark:from-neutral-900 dark:to-neutral-800">
           {p.title.slice(0, 1)}
         </div>
 
-        <div>
-          {p.categoryName && <p className="text-xs text-neutral-500">{p.categoryName}</p>}
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{p.title}</h1>
+        <div className="flex flex-col">
+          {p.categoryName && (
+            <span className="inline-block w-fit rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">{p.categoryName}</span>
+          )}
+          <h1 className="mt-2 text-2xl font-bold tracking-tight">{p.title}</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {p.designerName ?? "원작자 미상"}
             {p.sellerBrand && ` · ${p.sellerBrand}`}
@@ -141,6 +143,7 @@ export default function PatternDetailPage() {
         </div>
       </div>
 
+      <div className="mt-6 space-y-4">
       {/* 게이지 — 모든 도안 통일 표시(미등록도 항목 노출) */}
       <Section title="게이지">
         {p.gaugeInfo ? (
@@ -199,6 +202,7 @@ export default function PatternDetailPage() {
           </a>
         </Section>
       )}
+      </div>
 
       <ReviewSection patternId={id} loggedIn={!!me} />
     </main>
@@ -215,8 +219,8 @@ function Empty() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+    <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">{title}</h2>
       {children}
     </section>
   );

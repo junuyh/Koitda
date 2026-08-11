@@ -9,6 +9,9 @@ import { gaugeApi } from "@/features/gauge/api";
 
 const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
 
+// 레트로(2000년대) 박스 — 두꺼운 라운드 보더
+const box = "rounded-[22px] border-2 border-neutral-900 bg-white dark:border-neutral-100 dark:bg-neutral-950";
+
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
@@ -65,202 +68,166 @@ export default function ProjectDetailPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <Link href="/projects" className="text-sm text-neutral-500 hover:underline">← 내 니팅로그</Link>
 
-      <div className="mt-3 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{p.displayTitle}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {p.patternType === "EXTERNAL" ? p.external?.title ?? "외부 도안" : snap?.title ?? "코잇다 도안"}
-            {p.patternType === "EXTERNAL" && p.external?.creatorName ? ` · ${p.external.creatorName}` : ""}
-            {" · "}{p.visibility === "PUBLIC" ? "공개" : "비공개"}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-            {STATUS_LABEL[p.status] ?? p.status}
-          </span>
-          <button
-            type="button"
-            onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
-            disabled={changeVisibility.isPending}
-            className="text-xs text-neutral-500 underline disabled:opacity-50"
-          >
-            {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) {
-                trash.mutate();
-              }
-            }}
-            disabled={trash.isPending}
-            className="text-xs text-red-500 underline disabled:opacity-50"
-          >
-            삭제
-          </button>
-        </div>
-      </div>
-
-      {p.note && <p className="mt-4 whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{p.note}</p>}
-
-      {/* 원작 스냅샷 (판매 도안 연결) */}
-      {snap?.gauge && (
-        <Section title="원작 게이지 (연결 시점 복사)">
-          <p className="text-sm">{snap.gauge.stitches}코 × {snap.gauge.rows}단{snap.gauge.needleSizeMm ? ` · 바늘 ${snap.gauge.needleSizeMm}mm` : ""}</p>
-        </Section>
-      )}
-      {snap?.sizes && snap.sizes.length > 0 && (
-        <Section title="원작 사이즈">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[360px] text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200 text-left dark:border-neutral-800">
-                  <th className="py-1.5 pr-4 font-medium">사이즈</th>
-                  <th className="py-1.5 pr-4 font-medium">시작 콧수</th>
-                  {measureKeys.map((k) => <th key={k} className="py-1.5 pr-4 font-medium">{k}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {snap.sizes.map((s) => (
-                  <tr key={s.label} className="border-b border-neutral-100 dark:border-neutral-900">
-                    <td className="py-1.5 pr-4">{s.label}</td>
-                    <td className="py-1.5 pr-4">{s.castOnStitches}코</td>
-                    {measureKeys.map((k) => <td key={k} className="py-1.5 pr-4">{s.measurements[k]}cm</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="mt-4 space-y-4">
+        {/* 헤더 박스 */}
+        <div className={`${box} p-5`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Knitting Log</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight">{p.displayTitle}</h1>
+            </div>
+            <span className="shrink-0 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100">
+              {STATUS_LABEL[p.status] ?? p.status}
+            </span>
           </div>
-        </Section>
-      )}
 
-      {/* 재료 */}
-      {p.yarns.length > 0 && (
-        <Section title="실">
-          <ul className="space-y-1 text-sm">
-            {p.yarns.map((y, i) => (
-              <li key={i}>{[y.brand, y.yarnName, y.color, y.amount].filter(Boolean).join(" · ") || "-"}</li>
+          <dl className="mt-4 space-y-1.5 text-sm">
+            <Row label="도안">
+              {p.patternType === "EXTERNAL" ? p.external?.title ?? "외부 도안" : snap?.title ?? "코잇다 도안"}
+              {p.patternType === "EXTERNAL" && p.external?.creatorName ? ` · ${p.external.creatorName}` : ""}
+            </Row>
+            <Row label="공개">{p.visibility === "PUBLIC" ? "공개" : "비공개"}</Row>
+            {p.note && <Row label="코멘트">{p.note}</Row>}
+          </dl>
+
+          <div className="mt-4 flex flex-wrap gap-2 border-t-2 border-dashed border-neutral-200 pt-3 dark:border-neutral-800">
+            <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+              disabled={changeVisibility.isPending}
+              className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-medium disabled:opacity-50 dark:border-neutral-100">
+              {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+            </button>
+            <button type="button"
+              onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
+              disabled={trash.isPending}
+              className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-medium text-red-500 disabled:opacity-50">
+              삭제
+            </button>
+          </div>
+        </div>
+
+        {/* 원작 스냅샷 */}
+        {(snap?.gauge || (snap?.sizes && snap.sizes.length > 0)) && (
+          <Section title="원작 정보 (연결 시점 복사)">
+            {snap?.gauge && (
+              <Row label="게이지">{snap.gauge.stitches}코 × {snap.gauge.rows}단{snap.gauge.needleSizeMm ? ` · 바늘 ${snap.gauge.needleSizeMm}mm` : ""}</Row>
+            )}
+            {snap?.sizes && snap.sizes.length > 0 && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[360px] text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-neutral-900 text-left dark:border-neutral-100">
+                      <th className="py-1.5 pr-4 font-bold">사이즈</th>
+                      <th className="py-1.5 pr-4 font-bold">시작 콧수</th>
+                      {measureKeys.map((k) => <th key={k} className="py-1.5 pr-4 font-bold">{k}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snap.sizes.map((s) => (
+                      <tr key={s.label} className="border-b border-neutral-200 dark:border-neutral-800">
+                        <td className="py-1.5 pr-4">{s.label}</td>
+                        <td className="py-1.5 pr-4">{s.castOnStitches}코</td>
+                        {measureKeys.map((k) => <td key={k} className="py-1.5 pr-4">{s.measurements[k]}cm</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* 재료 */}
+        {p.yarns.length > 0 && (
+          <Section title="실">
+            <ul className="space-y-1 text-sm">
+              {p.yarns.map((y, i) => <li key={i}>{[y.brand, y.yarnName, y.color, y.amount].filter(Boolean).join(" · ") || "-"}</li>)}
+            </ul>
+          </Section>
+        )}
+        {p.gauges.length > 0 && (
+          <Section title="내 게이지">
+            <ul className="space-y-1 text-sm">
+              {p.gauges.map((g, i) => <li key={i}>{g.stitches}코 × {g.rows}단{g.needleSizeMm ? ` · ${g.needleSizeMm}mm` : ""}</li>)}
+            </ul>
+          </Section>
+        )}
+
+        {/* 게이지 계산 */}
+        {p.patternType !== "EXTERNAL" && (
+          <Section title="게이지 계산">
+            {appliedGauge ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm">
+                  <p>조정 시작 콧수 <span className="font-bold">{appliedGauge.adjustedCastOnStitches}코</span></p>
+                  {appliedGauge.adjustmentSummary && <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">조정: {appliedGauge.adjustmentSummary}</p>}
+                </div>
+                <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs font-medium underline">다시 계산</Link>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-neutral-500">내 게이지 기준으로 조정 콧수·부위별 필요 콧수를 계산해 보세요.</p>
+                <Link href={`/projects/${id}/gauge`} className="shrink-0 rounded-full border-2 border-neutral-900 px-4 py-1.5 text-sm font-medium dark:border-neutral-100">게이지 계산</Link>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* 오늘의 로그 */}
+        <Section title="오늘의 로그">
+          <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility} onDone={invalidate} />
+          <ul className="mt-4 divide-y-2 divide-dashed divide-neutral-200 dark:divide-neutral-800">
+            {(logs ?? []).map((l) => (
+              <li key={l.id} className="py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">{l.displayTitle}</span>
+                  <span className="text-xs text-neutral-500">{l.logDate} · {l.knittingStatus ? STATUS_LABEL[l.knittingStatus] : ""}</span>
+                </div>
+                {l.comment && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{l.comment}</p>}
+              </li>
             ))}
+            {(logs ?? []).length === 0 && <li className="py-3 text-sm text-neutral-400">아직 로그가 없습니다.</li>}
           </ul>
         </Section>
-      )}
-      {p.gauges.length > 0 && (
-        <Section title="내 게이지">
-          <ul className="space-y-1 text-sm">
-            {p.gauges.map((g, i) => (
-              <li key={i}>{g.stitches}코 × {g.rows}단{g.needleSizeMm ? ` · ${g.needleSizeMm}mm` : ""}</li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {/* 게이지 계산 (GAUGE-001·013) — 도안 연결 니팅로그에서 진입 */}
-      {p.patternType !== "EXTERNAL" && (
-        <Section title="게이지 계산">
-          {appliedGauge ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm">
-                <p>조정 시작 콧수 <span className="font-semibold">{appliedGauge.adjustedCastOnStitches}코</span></p>
-                {appliedGauge.adjustmentSummary && (
-                  <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">조정: {appliedGauge.adjustmentSummary}</p>
-                )}
-              </div>
-              <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs text-neutral-500 underline">다시 계산</Link>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-neutral-500">내 게이지 기준으로 조정 콧수·부위별 필요 콧수를 계산해 보세요.</p>
-              <Link href={`/projects/${id}/gauge`}
-                className="shrink-0 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-                게이지 계산
-              </Link>
-            </div>
-          )}
-        </Section>
-      )}
-
-      {/* 오늘의 로그 */}
-      <Section title="오늘의 로그">
-        <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility} onDone={invalidate} />
-        <ul className="mt-4 divide-y divide-neutral-100 dark:divide-neutral-900">
-          {(logs ?? []).map((l) => (
-            <li key={l.id} className="py-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{l.displayTitle}</span>
-                <span className="text-xs text-neutral-500">
-                  {l.logDate} · {l.knittingStatus ? STATUS_LABEL[l.knittingStatus] : ""}
-                </span>
-              </div>
-              {l.comment && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{l.comment}</p>}
-            </li>
-          ))}
-          {(logs ?? []).length === 0 && <li className="py-3 text-sm text-neutral-400">아직 로그가 없습니다.</li>}
-        </ul>
-      </Section>
+      </div>
     </main>
   );
 }
 
 function QuickLogForm({
-  projectId,
-  currentStatus,
-  projectVisibility,
-  onDone,
-}: {
-  projectId: number;
-  currentStatus: string;
-  projectVisibility: string;
-  onDone: () => void;
-}) {
+  projectId, currentStatus, projectVisibility, onDone,
+}: { projectId: number; currentStatus: string; projectVisibility: string; onDone: () => void }) {
   const [status, setStatus] = useState("CO");
   const [comment, setComment] = useState("");
   const [makePublic, setMakePublic] = useState(false);
 
-  // 첫 로그 제안 CO, 이후는 현재 상태(POST-003)
-  useEffect(() => {
-    setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus);
-  }, [currentStatus]);
+  useEffect(() => { setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus); }, [currentStatus]);
 
   const submit = useMutation({
     mutationFn: () => {
-      const body: Parameters<typeof projectApi.createLog>[1] = {
-        knittingStatus: status,
-        comment: comment.trim() || undefined,
-      };
+      const body: Parameters<typeof projectApi.createLog>[1] = { knittingStatus: status, comment: comment.trim() || undefined };
       if (makePublic) {
         body.visibility = "PUBLIC";
-        // 비공개 니팅로그를 공개 로그로 올리면 니팅로그도 함께 공개된다 → 확인(POST-011)
         if (projectVisibility === "PRIVATE") {
-          body.publishProjectConfirmed = window.confirm(
-            "이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?",
-          );
+          body.publishProjectConfirmed = window.confirm("이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?");
         }
       }
       return projectApi.createLog(projectId, body);
     },
-    onSuccess: () => {
-      setComment("");
-      setMakePublic(false);
-      onDone();
-    },
+    onSuccess: () => { setComment(""); setMakePublic(false); onDone(); },
   });
 
   return (
-    <form
-      className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800"
-      onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}
-    >
+    <form className="rounded-2xl border-2 border-dashed border-neutral-400 p-3 dark:border-neutral-600"
+      onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="상태"
-          className="rounded-md border border-neutral-300 bg-transparent px-2 py-2 text-sm dark:border-neutral-700">
+          className="rounded-full border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm dark:border-neutral-100">
           {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
         <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="오늘의 기록 한 줄"
-          className="flex-1 rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700" />
+          className="flex-1 rounded-full border-2 border-neutral-900 bg-transparent px-4 py-2 text-sm dark:border-neutral-100" />
         <button type="submit" disabled={submit.isPending}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
-          기록
-        </button>
+          className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">기록</button>
       </div>
       <label className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
         <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
@@ -270,15 +237,24 @@ function QuickLogForm({
   );
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
-  return <main className="flex flex-1 items-center justify-center py-16 text-sm text-neutral-400">{children}</main>;
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <dt className="w-16 shrink-0 text-neutral-400">{label}</dt>
+      <dd className="min-w-0 text-neutral-800 dark:text-neutral-200">{children}</dd>
+    </div>
+  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+    <section className={`${box} p-5`}>
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-neutral-400">{title}</h2>
       {children}
     </section>
   );
+}
+
+function Centered({ children }: { children: React.ReactNode }) {
+  return <main className="flex flex-1 items-center justify-center py-16 text-sm text-neutral-400">{children}</main>;
 }

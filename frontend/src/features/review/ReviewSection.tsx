@@ -33,9 +33,9 @@ export function ReviewSection({ patternId, loggedIn }: { patternId: number; logg
   const canWrite = loggedIn && data?.purchased && !data?.myReviewId;
 
   return (
-    <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+    <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">리뷰 {data ? `(${data.items.length})` : ""}</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">리뷰 {data ? `(${data.items.length})` : ""}</h2>
         {canWrite && (
           <Link href={`/patterns/${patternId}/reviews/new`}
             className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
