@@ -22,24 +22,37 @@ function NewProjectForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const sellingPatternId = searchParams.get("sellingPatternId");
-  const isCatalog = !!sellingPatternId;
+  const initialPatternId = searchParams.get("sellingPatternId");
 
-  // 판매 도안 연결이면 도안명을 보여주기 위해 상세를 가져온다.
-  const { data: pattern } = useQuery({
-    queryKey: ["pattern", Number(sellingPatternId)],
-    queryFn: () => patternApi.get(Number(sellingPatternId)),
-    enabled: isCatalog,
-  });
-
+  // 도안 연결: 코잇다 도안(CATALOG) vs 외부 도안(EXTERNAL)
+  const [connection, setConnection] = useState<"CATALOG" | "EXTERNAL">(initialPatternId ? "CATALOG" : "CATALOG");
+  const [selectedPatternId, setSelectedPatternId] = useState<number | null>(
+    initialPatternId ? Number(initialPatternId) : null,
+  );
+  const [search, setSearch] = useState("");
   const [externalTitle, setExternalTitle] = useState("");
   const [externalCreator, setExternalCreator] = useState("");
+
   const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+  const [comment, setComment] = useState("");
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
   const [yarns, setYarns] = useState<YarnRow[]>([{ brand: "", yarnName: "", color: "", amount: "" }]);
   const [gauges, setGauges] = useState<GaugeRow[]>([{ stitches: "", rows: "", needleSizeMm: "" }]);
   const [error, setError] = useState<string | null>(null);
+
+  // 선택된 코잇다 도안의 이름 표시
+  const { data: selectedPattern } = useQuery({
+    queryKey: ["pattern", selectedPatternId],
+    queryFn: () => patternApi.get(selectedPatternId as number),
+    enabled: connection === "CATALOG" && selectedPatternId != null,
+  });
+
+  // 도안 검색(연결용)
+  const { data: results } = useQuery({
+    queryKey: ["pattern-search", search],
+    queryFn: () => patternApi.list({ q: search, size: 6 }),
+    enabled: connection === "CATALOG" && selectedPatternId == null && search.trim().length > 0,
+  });
 
   const create = useMutation({
     mutationFn: (body: CreateProjectBody) => projectApi.create(body),
@@ -55,9 +68,9 @@ function NewProjectForm() {
     setError(null);
 
     const body: CreateProjectBody = {
-      connectionType: isCatalog ? "CATALOG" : "EXTERNAL",
+      connectionType: connection,
       title: title.trim() || undefined,
-      note: note.trim() || undefined,
+      note: comment.trim() || undefined,
       visibility,
       yarns: yarns
         .filter((y) => y.brand || y.yarnName || y.color || y.amount)
@@ -72,13 +85,11 @@ function NewProjectForm() {
         })),
     };
 
-    if (isCatalog) {
-      body.sellingPatternId = Number(sellingPatternId);
+    if (connection === "CATALOG") {
+      if (!selectedPatternId) { setError("연결할 코잇다 도안을 선택하세요."); return; }
+      body.sellingPatternId = selectedPatternId;
     } else {
-      if (!externalTitle.trim()) {
-        setError("외부 도안의 도안명을 입력하세요.");
-        return;
-      }
+      if (!externalTitle.trim()) { setError("외부 도안의 도안명을 입력하세요."); return; }
       body.externalPattern = { title: externalTitle.trim(), creatorName: externalCreator.trim() || undefined };
     }
     create.mutate(body);
@@ -89,36 +100,57 @@ function NewProjectForm() {
       <h1 className="text-2xl font-semibold tracking-tight">니팅로그 만들기</h1>
 
       <form className="mt-6 space-y-6" onSubmit={submit} noValidate>
-        {/* 1. 도안 연결 */}
+        {/* 1. 제목 */}
+        <Section title="제목">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="선택, 미입력 시 날짜 기반" className={inputClass} />
+        </Section>
+
+        {/* 2. 도안 연결 */}
         <Section title="도안 연결">
-          {isCatalog ? (
-            <p className="text-sm">
-              코잇다 도안 연결: <span className="font-medium">{pattern?.title ?? `#${sellingPatternId}`}</span>
-              <span className="block text-xs text-neutral-500">연결 시 원작 게이지·사이즈가 스냅샷으로 복사됩니다.</span>
-            </p>
+          <div className="mb-3 flex gap-2">
+            <TypeButton active={connection === "CATALOG"} onClick={() => setConnection("CATALOG")}>코잇다 도안</TypeButton>
+            <TypeButton active={connection === "EXTERNAL"} onClick={() => setConnection("EXTERNAL")}>외부 도안</TypeButton>
+          </div>
+
+          {connection === "CATALOG" ? (
+            selectedPatternId ? (
+              <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700">
+                <span className="text-sm">
+                  연결됨: <span className="font-medium">{selectedPattern?.title ?? `#${selectedPatternId}`}</span>
+                  <span className="ml-2 text-xs text-neutral-500">연결 시 원작 게이지·사이즈가 스냅샷으로 복사됩니다.</span>
+                </span>
+                <button type="button" onClick={() => { setSelectedPatternId(null); setSearch(""); }} className="text-xs text-neutral-500 hover:underline">변경</button>
+              </div>
+            ) : (
+              <div>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="도안명·원작자로 검색" className={inputClass} />
+                {results && results.items.length > 0 && (
+                  <ul className="mt-2 divide-y divide-neutral-100 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+                    {results.items.map((p) => (
+                      <li key={p.id}>
+                        <button type="button" onClick={() => setSelectedPatternId(p.id)}
+                          className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                          <span>{p.title} <span className="text-xs text-neutral-500">{p.sellerBrand ?? p.designerName ?? ""}</span></span>
+                          <span className="text-xs text-neutral-400">연결</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {search.trim() && results && results.items.length === 0 && (
+                  <p className="mt-2 text-xs text-neutral-400">검색 결과가 없어요.</p>
+                )}
+              </div>
+            )
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Labeled label="도안명 (필수)">
-                <input value={externalTitle} onChange={(e) => setExternalTitle(e.target.value)} className={inputClass} />
-              </Labeled>
-              <Labeled label="원작자 (선택)">
-                <input value={externalCreator} onChange={(e) => setExternalCreator(e.target.value)} className={inputClass} />
-              </Labeled>
+              <Labeled label="도안명 (필수)"><input value={externalTitle} onChange={(e) => setExternalTitle(e.target.value)} className={inputClass} /></Labeled>
+              <Labeled label="원작자 (선택)"><input value={externalCreator} onChange={(e) => setExternalCreator(e.target.value)} className={inputClass} /></Labeled>
             </div>
           )}
         </Section>
 
-        {/* 2. 제목·비고 */}
-        <Section title="니팅로그 정보">
-          <Labeled label="제목 (선택, 미입력 시 날짜 기반)">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
-          </Labeled>
-          <Labeled label="비고 (선택)">
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClass} />
-          </Labeled>
-        </Section>
-
-        {/* 3. 실 (다중) */}
+        {/* 3. 실 */}
         <Section title="실" onAdd={() => setYarns((v) => [...v, { brand: "", yarnName: "", color: "", amount: "" }])}>
           {yarns.map((y, i) => (
             <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -130,8 +162,8 @@ function NewProjectForm() {
           ))}
         </Section>
 
-        {/* 4. 게이지 (다중) */}
-        <Section title="게이지" onAdd={() => setGauges((v) => [...v, { stitches: "", rows: "", needleSizeMm: "" }])}>
+        {/* 4. 게이지 (바늘 정보 포함) */}
+        <Section title="게이지 · 바늘" onAdd={() => setGauges((v) => [...v, { stitches: "", rows: "", needleSizeMm: "" }])}>
           {gauges.map((g, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
               <input placeholder="코수" inputMode="decimal" value={g.stitches} onChange={(e) => setGauges(upd(gauges, i, "stitches", e.target.value))} className={inputClass} />
@@ -141,13 +173,16 @@ function NewProjectForm() {
           ))}
         </Section>
 
-        {/* 5. 공개 */}
-        <Section title="공개 설정">
-          <label className="flex items-center gap-2 text-sm">
+        {/* 5. 코멘트 + 공개 */}
+        <Section title="코멘트">
+          <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="한 줄 코멘트 (선택)" className={inputClass} />
+          <label className="mt-3 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={visibility === "PUBLIC"} onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")} className="h-4 w-4" />
             공개 (기본은 비공개)
           </label>
         </Section>
+
+        <p className="text-xs text-neutral-400">대표 이미지 등록은 파일 업로드 도입 후 추가됩니다.</p>
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
@@ -167,14 +202,21 @@ function upd<T extends Record<string, string>>(rows: T[], i: number, key: keyof 
   return rows.map((r, idx) => (idx === i ? { ...r, [key]: value } : r));
 }
 
+function TypeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`rounded-md px-3 py-1.5 text-sm ${active ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "border border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"}`}>
+      {children}
+    </button>
+  );
+}
+
 function Section({ title, onAdd, children }: { title: string; onAdd?: () => void; children: React.ReactNode }) {
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold">{title}</h2>
-        {onAdd && (
-          <button type="button" onClick={onAdd} className="text-xs text-neutral-500 hover:underline">+ 행 추가</button>
-        )}
+        {onAdd && <button type="button" onClick={onAdd} className="text-xs text-neutral-500 hover:underline">+ 행 추가</button>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
