@@ -5,6 +5,7 @@ import com.koitda.common.error.ErrorCode;
 import com.koitda.seller.domain.ApplicationStatus;
 import com.koitda.seller.domain.SellerApplication;
 import com.koitda.seller.domain.SellerProfile;
+import com.koitda.seller.dto.SellerDtos.AdminApplicationItem;
 import com.koitda.seller.dto.SellerDtos.SellerApplicationRequest;
 import com.koitda.seller.dto.SellerDtos.SellerApplicationResponse;
 import com.koitda.seller.repository.SellerApplicationRepository;
@@ -63,6 +64,30 @@ public class SellerService {
 	public void reject(Long reviewerId, Long applicationId, String reason) {
 		SellerApplication app = pendingApplication(applicationId);
 		app.reject(reviewerId, reason);
+	}
+
+	/** 관리자 판매자 심사 큐(GET /admin/seller-applications). status 가 null 이면 전체. */
+	@Transactional(readOnly = true)
+	public java.util.List<AdminApplicationItem> adminApplications(ApplicationStatus status) {
+		java.util.List<SellerApplication> apps = (status == null)
+				? applicationRepository.findAllByOrderByCreatedAtDesc()
+				: applicationRepository.findByStatusOrderByCreatedAtDesc(status);
+		return apps.stream().map(a -> new AdminApplicationItem(
+				a.getId(), a.getBrandName(), a.getBusinessType(), a.getBusinessNo(),
+				a.getRepresentativeName(), a.getSettlementBank(), maskAccount(a.getSettlementAccount()),
+				a.getStatus().name(), a.getRejectionReason(), a.getCreatedAt(), a.getReviewedAt())).toList();
+	}
+
+	/** 정산계좌는 뒤 4자리만 노출한다(개인·금융정보 최소 노출). */
+	private static String maskAccount(String account) {
+		if (account == null || account.isBlank()) {
+			return null;
+		}
+		String digits = account.replaceAll("\\s", "");
+		if (digits.length() <= 4) {
+			return "****";
+		}
+		return "****" + digits.substring(digits.length() - 4);
 	}
 
 	private SellerApplication pendingApplication(Long applicationId) {

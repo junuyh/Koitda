@@ -18,4 +18,7 @@ public interface SellingPatternImageRepository extends JpaRepository<SellingPatt
 	@Query("select i from SellingPatternImage i join fetch i.file "
 			+ "where i.patternId = :patternId order by i.sortOrder asc, i.id asc")
 	List<SellingPatternImage> findByPattern(@Param("patternId") Long patternId);
+
+	/** 초안 이미지 재저장 시 기존 행 제거(전체 교체 방식). */
+	void deleteByPatternId(Long patternId);
 }

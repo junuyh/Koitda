@@ -42,7 +42,15 @@ public class SecurityConfig {
 						// 카탈로그 조회는 비로그인도 허용(위시·내정보 등 나머지는 인증 필요)
 						.requestMatchers(HttpMethod.GET, "/api/v1/patterns", "/api/v1/patterns/*",
 								"/api/v1/pattern-categories").permitAll()
+						// 공개 리뷰 목록·상세는 비로그인도 허용(작성·불러오기·수정·삭제는 인증 필요)
+						.requestMatchers(HttpMethod.GET, "/api/v1/patterns/*/reviews", "/api/v1/reviews/*").permitAll()
+						// 댓글 수·내용은 비로그인도 조회 가능(SOCIAL-002). 작성·좋아요·팔로우·신고는 인증 필요
+						.requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
+						// 공개 니팅로그의 적용 게이지 계산은 비로그인도 조회 가능(GAUGE-014)
+						.requestMatchers(HttpMethod.GET, "/api/v1/projects/*/gauge-calculation").permitAll()
 						.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+						// 판매자 도안 등록·관리는 SELLER 역할 필요(seller-applications 는 하이픈이라 여기 안 걸림 → 일반 인증)
+						.requestMatchers("/api/v1/seller/**").hasRole("SELLER")
 						.anyRequest().authenticated())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 				// 폼 로그인 리다이렉트 대신 API 답게 401/403 JSON 을 돌려준다.

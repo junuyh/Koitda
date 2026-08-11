@@ -117,4 +117,36 @@ public class SellerApplication {
 	public ApplicationStatus getStatus() {
 		return status;
 	}
+
+	public BusinessType getBusinessType() {
+		return businessType;
+	}
+
+	public String getBusinessNo() {
+		return businessNo;
+	}
+
+	public String getRepresentativeName() {
+		return representativeName;
+	}
+
+	public String getSettlementBank() {
+		return settlementBank;
+	}
+
+	public String getSettlementAccount() {
+		return settlementAccount;
+	}
+
+	public String getRejectionReason() {
+		return rejectionReason;
+	}
+
+	public OffsetDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	public OffsetDateTime getReviewedAt() {
+		return reviewedAt;
+	}
 }

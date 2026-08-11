@@ -17,6 +17,33 @@ public interface SellingPatternRepository extends JpaRepository<SellingPattern, 
 	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "seller")
 	Optional<SellingPattern> findByIdAndProductStatus(Long id, ProductStatus productStatus);
 
+	/** 판매자 소유 도안 단건(편집·제출·미리보기 권한 확인용). 소유자 아니면 빈 값 → 404 로 처리. */
+	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "seller")
+	Optional<SellingPattern> findByIdAndSeller_Id(Long id, Long sellerId);
+
+	/** 내 도안 목록(GET /seller/patterns). status 가 null 이면 전체 상태. */
+	@Query("""
+			select p from SellingPattern p
+			where p.seller.id = :sellerId
+				and (:status is null or p.productStatus = :status)
+			order by p.updatedAt desc, p.id desc
+			""")
+	java.util.List<SellingPattern> findMine(@Param("sellerId") Long sellerId,
+			@Param("status") ProductStatus status);
+
+	/** 관리자 도안 심사 큐(GET /admin/patterns). status 가 null 이면 전체. 판매자명 표시로 fetch join. */
+	@Query("""
+			select p from SellingPattern p
+				join fetch p.seller
+			where (:status is null or p.productStatus = :status)
+			order by p.updatedAt desc, p.id desc
+			""")
+	java.util.List<SellingPattern> findForReview(@Param("status") ProductStatus status);
+
+	/** 관리자 도안 상세(심사용) — 상태 무관. 판매자명 로딩. */
+	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "seller")
+	Optional<SellingPattern> findWithSellerById(Long id);
+
 	/**
 	 * 카탈로그 목록. APPROVED 도안만 노출한다. 각 필터는 null 이면 조건에서 제외된다.
 	 * seller 는 판매자명 표시를 위해 fetch join(단일값 연관이라 페이지네이션과 충돌 없음).

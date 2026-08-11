@@ -100,6 +100,34 @@ class SellerApplicationTest {
 	}
 
 	@Test
+	void 관리자_심사_큐에서_신청이_보이고_정산계좌는_마스킹된다() throws Exception {
+		signup("queue-apply@koitda.dev");
+		MockHttpSession user = login("queue-apply@koitda.dev");
+		mockMvc.perform(post("/api/v1/seller-applications").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"brandName":"큐니트","businessType":"INDIVIDUAL","businessNo":"111-22-33333",
+						 "representativeName":"김판매","settlementBank":"코잇은행",
+						 "settlementAccount":"110-999-000111","termsVersion":"1.0"}
+						"""))
+				.andExpect(status().isCreated());
+
+		long adminId = signup("queue-admin2@koitda.dev");
+		jdbc.update("INSERT INTO user_role(user_id, role) VALUES (?, 'ADMIN')", adminId);
+		MockHttpSession admin = login("queue-admin2@koitda.dev");
+
+		// 심사 대기 큐에 신청이 나타나고, 정산계좌는 뒤 4자리만 노출된다(개인·금융정보 최소 노출)
+		mockMvc.perform(get("/api/v1/admin/seller-applications?status=PENDING").session(admin))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[?(@.brandName == '큐니트')].settlementAccountMasked").value(hasItem("****0111")))
+				.andExpect(jsonPath("$[?(@.brandName == '큐니트')].businessNo").value(hasItem("111-22-33333")));
+
+		// 일반 사용자는 심사 큐 접근 불가(403)
+		mockMvc.perform(get("/api/v1/admin/seller-applications?status=PENDING").session(user))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
 	void 심사중_신청이_있으면_중복_신청은_409() throws Exception {
 		signup("dup-apply@koitda.dev");
 		MockHttpSession user = login("dup-apply@koitda.dev");
