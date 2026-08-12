@@ -7,6 +7,8 @@ import { authApi } from "@/features/auth/api";
 import { patternApi } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
 import { ReviewSection } from "@/features/review/ReviewSection";
+import { RichContent } from "@/features/editor/RichContent";
+import type { JSONContent } from "@tiptap/react";
 import { ApiError } from "@/lib/api";
 
 const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
@@ -196,7 +198,9 @@ export default function PatternDetailPage() {
       </Section>
 
       <Section title="상세 설명">
-        {p.description ? (
+        {p.descriptionDocument ? (
+          <RichContent doc={p.descriptionDocument as JSONContent} />
+        ) : p.description ? (
           <p className="whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{p.description}</p>
         ) : <Empty />}
       </Section>

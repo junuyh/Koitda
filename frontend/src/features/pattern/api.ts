@@ -67,6 +67,7 @@ export type PatternDetail = {
   pageCount: number | null;
   yarnRequirement: string | null;
   description: string | null;
+  descriptionDocument: unknown;
   publishedAt: string | null;
   viewCount: number;
   reviewCount: number;

@@ -47,6 +47,7 @@ export type SavePatternDraftBody = {
   pageCount?: number;
   yarnRequirement?: string;
   description?: string;
+  descriptionDocument?: unknown;
   gauge?: GaugeBody;
   sizes?: SizeRow[];
   imageFileIds?: number[];
@@ -86,6 +87,7 @@ export type SellerPatternPreview = {
   pageCount: number | null;
   yarnRequirement: string | null;
   description: string | null;
+  descriptionDocument: unknown;
   productStatus: string;
   rejectionReason: string | null;
   publishedAt: string | null;

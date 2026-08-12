@@ -67,7 +67,7 @@ public class PatternQueryService {
 				p.getRegularPrice(), p.getSalePrice(),
 				p.getProductForm(), p.getDeliveryMethod(), p.getAvailabilityDays(),
 				p.getReferenceVideoUrl(), p.getPageCount(),
-				p.getYarnRequirement(), p.getDescription(), p.getPublishedAt(),
+				p.getYarnRequirement(), p.getDescription(), p.getDescriptionDocument(), p.getPublishedAt(),
 				p.getViewCount(), p.getReviewCount(), p.getWishCount(), p.getPublicProjectCount(), wished,
 				images,
 				p.getGaugeInfo(), p.getSizeInfo(), p.getNeedleInfo(), p.getTechniqueInfo());

@@ -99,6 +99,11 @@ public class SellingPattern {
 	@Column(name = "description")
 	private String description;
 
+	// 블록 에디터(TipTap) 본문. 검색용 평문은 description 에 유지.
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "description_document")
+	private String descriptionDocument;
+
 	// JSONB → 원시 JSON 문자열로 매핑(@JdbcTypeCode). 응답에서는 @JsonRawValue 로 중첩 JSON 그대로 노출.
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "gauge_info")
@@ -157,8 +162,8 @@ public class SellingPattern {
 	public void editDetails(String title, String designerName, Long categoryId, CraftType craftType,
 			String difficulty, String language, Long regularPrice, Long salePrice, String productForm,
 			String deliveryMethod, Integer availabilityDays, String referenceVideoUrl, Integer pageCount,
-			String yarnRequirement, String description, String gaugeInfo, String sizeInfo, String needleInfo,
-			String techniqueInfo, Long currentFileId) {
+			String yarnRequirement, String description, String descriptionDocument, String gaugeInfo,
+			String sizeInfo, String needleInfo, String techniqueInfo, Long currentFileId) {
 		requireEditable();
 		this.title = title;
 		this.designerName = designerName;
@@ -175,6 +180,7 @@ public class SellingPattern {
 		this.pageCount = pageCount;
 		this.yarnRequirement = yarnRequirement;
 		this.description = description;
+		this.descriptionDocument = descriptionDocument;
 		this.gaugeInfo = gaugeInfo;
 		this.sizeInfo = sizeInfo;
 		this.needleInfo = needleInfo;
@@ -336,6 +342,10 @@ public class SellingPattern {
 
 	public String getDescription() {
 		return description;
+	}
+
+	public String getDescriptionDocument() {
+		return descriptionDocument;
 	}
 
 	public String getGaugeInfo() {

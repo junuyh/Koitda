@@ -6,6 +6,8 @@ import { patternApi } from "@/features/pattern/api";
 import type { SavePatternDraftBody, SellerPatternPreview } from "@/features/seller/api";
 import { ImageUploader } from "@/features/file/ImageUploader";
 import { fileApi } from "@/features/file/api";
+import { RichEditor } from "@/features/editor/RichEditor";
+import type { JSONContent } from "@tiptap/react";
 
 /** preview 이미지 URL(/api/v1/files/123)에서 fileId 를 뽑는다(수정 진입 프리필용). */
 function fileIdsFromPreview(p?: SellerPatternPreview): number[] {
@@ -127,6 +129,7 @@ export function PatternForm({
   const [imageIds, setImageIds] = useState<number[]>(() => fileIdsFromPreview(initial));
   const [pdfId, setPdfId] = useState<number | null>(() => initial?.pdfFileId ?? null);
   const [pdfUploading, setPdfUploading] = useState(false);
+  const [descDoc, setDescDoc] = useState<JSONContent | null>(() => (initial?.descriptionDocument as JSONContent) ?? null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories } = useQuery({ queryKey: ["pattern-categories"], queryFn: patternApi.categories });
@@ -208,6 +211,7 @@ export function PatternForm({
       pageCount: form.pageCount ? Number(form.pageCount) : undefined,
       yarnRequirement: form.yarnRequirement.trim() || undefined,
       description: form.description.trim() || undefined,
+      descriptionDocument: descDoc ?? undefined,
       gauge,
       sizes: sizes.length ? sizes : undefined,
       imageFileIds: imageIds.length ? imageIds : undefined,
@@ -321,8 +325,12 @@ export function PatternForm({
         <Labeled label="참고 동영상 URL">
           <input value={form.referenceVideoUrl} onChange={(e) => set("referenceVideoUrl", e.target.value)} className={inputClass} />
         </Labeled>
-        <Labeled label="상세 설명">
-          <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={4} className={inputClass} />
+        <Labeled label="상세 설명 (블로그 형식 — 줄글·사진·표)">
+          <RichEditor
+            initial={(initial?.descriptionDocument as JSONContent) ?? null}
+            usageType="PATTERN_IMAGE"
+            onChange={(v) => { setDescDoc(v.json); set("description", v.text); }}
+          />
         </Labeled>
       </Section>
 

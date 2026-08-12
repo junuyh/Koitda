@@ -27,6 +27,7 @@ public record PatternDetailResponse(
 		Integer pageCount,
 		String yarnRequirement,
 		String description,
+		@JsonRawValue String descriptionDocument,
 		OffsetDateTime publishedAt,
 		int viewCount,
 		int reviewCount,

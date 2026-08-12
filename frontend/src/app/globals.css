@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* TipTap 블록 에디터 콘텐츠 스타일 */
+.tiptap-content { line-height: 1.7; }
+.tiptap-content:focus { outline: none; }
+.tiptap-content p { margin: 0.4rem 0; }
+.tiptap-content h2 { font-size: 1.25rem; font-weight: 700; margin: 0.8rem 0 0.4rem; }
+.tiptap-content ul { list-style: disc; padding-left: 1.4rem; margin: 0.4rem 0; }
+.tiptap-content ol { list-style: decimal; padding-left: 1.4rem; margin: 0.4rem 0; }
+.tiptap-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 0.5rem 0; }
+.tiptap-content table { border-collapse: collapse; width: 100%; margin: 0.6rem 0; }
+.tiptap-content th, .tiptap-content td { border: 1px solid #d4d4d4; padding: 0.35rem 0.5rem; }
+.tiptap-content th { background: #f5f5f5; font-weight: 600; }
+.tiptap-content blockquote { border-left: 3px solid #d4d4d4; padding-left: 0.8rem; color: #737373; margin: 0.5rem 0; }
+:root[data-theme="dark"] .tiptap-content th, :root[data-theme="dark"] .tiptap-content td { border-color: #404040; }
+:root[data-theme="dark"] .tiptap-content th { background: #262626; }

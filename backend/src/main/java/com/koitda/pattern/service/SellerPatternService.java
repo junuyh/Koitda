@@ -104,6 +104,7 @@ public class SellerPatternService {
 				p.getDifficulty(), p.getLanguage(), p.getRegularPrice(), p.getSalePrice(),
 				p.getProductForm(), p.getDeliveryMethod(), p.getAvailabilityDays(),
 				p.getReferenceVideoUrl(), p.getPageCount(), p.getYarnRequirement(), p.getDescription(),
+				p.getDescriptionDocument(),
 				p.getProductStatus().name(), p.getRejectionReason(), p.getPublishedAt(), p.getCurrentFileId(),
 				images, p.getGaugeInfo(), p.getSizeInfo(), p.getNeedleInfo(), p.getTechniqueInfo());
 	}
@@ -206,13 +207,16 @@ public class SellerPatternService {
 				: objectMapper.writeValueAsString(Map.of("sizes", req.sizes()));
 		String needleJson = req.needle() == null ? null : objectMapper.writeValueAsString(req.needle());
 		String techniqueJson = req.technique() == null ? null : objectMapper.writeValueAsString(req.technique());
+		String descDocJson = req.descriptionDocument() == null ? null
+				: objectMapper.writeValueAsString(req.descriptionDocument());
 		try {
 			p.editDetails(
 					blankToNull(req.title()), blankToNull(req.designerName()), req.categoryId(), req.craftType(),
 					blankToNull(req.difficulty()), blankToNull(req.language()), req.regularPrice(), req.salePrice(),
 					blankToNull(req.productForm()), blankToNull(req.deliveryMethod()), req.availabilityDays(),
 					blankToNull(req.referenceVideoUrl()), req.pageCount(), blankToNull(req.yarnRequirement()),
-					blankToNull(req.description()), gaugeJson, sizeJson, needleJson, techniqueJson, req.pdfFileId());
+					blankToNull(req.description()), descDocJson, gaugeJson, sizeJson, needleJson, techniqueJson,
+					req.pdfFileId());
 		} catch (IllegalStateException e) {
 			throw new ApiException(ErrorCode.INVALID_PATTERN_STATE, "DRAFT·REJECTED 상태에서만 수정할 수 있습니다.");
 		}
