@@ -53,7 +53,7 @@ public class PatternQueryService {
 
 		List<PatternDetailResponse.Image> images = imageRepository.findByPattern(patternId).stream()
 				.map(i -> new PatternDetailResponse.Image(
-						i.getFile() != null ? i.getFile().getStorageKey() : null, i.isThumbnail()))
+						i.getFile() != null ? fileUrl(i.getFile().getId()) : null, i.isThumbnail()))
 				.toList();
 
 		boolean wished = userId != null && wishRepository.existsById(new Wish.WishId(userId, patternId));
@@ -99,7 +99,8 @@ public class PatternQueryService {
 
 		Map<Long, String> thumbnails = new HashMap<>();
 		for (SellingPatternImage image : imageRepository.findThumbnails(ids)) {
-			thumbnails.putIfAbsent(image.getPatternId(), thumbnailKey(image));
+			thumbnails.putIfAbsent(image.getPatternId(),
+					image.getFile() != null ? fileUrl(image.getFile().getId()) : null);
 		}
 
 		Set<Long> wished = (userId == null)
@@ -121,12 +122,8 @@ public class PatternQueryService {
 				wished.contains(p.getId()))).toList();
 	}
 
-	private String thumbnailKey(SellingPatternImage image) {
-		if (image.getFile() == null) {
-			return null;
-		}
-		return image.getFile().getThumbnailKey() != null
-				? image.getFile().getThumbnailKey()
-				: image.getFile().getStorageKey();
+	/** 파일 서빙 경로. 프론트는 이 URL 을 그대로 img src 로 쓴다(동일 출처 프록시). */
+	static String fileUrl(Long fileId) {
+		return fileId == null ? null : "/api/v1/files/" + fileId;
 	}
 }

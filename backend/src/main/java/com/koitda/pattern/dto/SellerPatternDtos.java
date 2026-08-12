@@ -70,7 +70,7 @@ public final class SellerPatternDtos {
 			String productStatus,
 			Long regularPrice,
 			Long salePrice,
-			String thumbnailKey,
+			String thumbnailUrl,
 			OffsetDateTime updatedAt,
 			OffsetDateTime publishedAt,
 			String rejectionReason) {
@@ -127,7 +127,7 @@ public final class SellerPatternDtos {
 			@JsonRawValue String needleInfo,
 			@JsonRawValue String techniqueInfo) {
 
-		public record Image(String key, boolean thumbnail) {
+		public record Image(String url, boolean thumbnail) {
 		}
 	}
 }

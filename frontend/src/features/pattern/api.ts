@@ -9,7 +9,7 @@ export type PatternListItem = {
   regularPrice: number | null;
   difficulty: string | null;
   craftType: string | null;
-  thumbnailKey: string | null;
+  thumbnailUrl: string | null;
   wishCount: number;
   publicProjectCount: number;
   wished: boolean;
@@ -73,7 +73,7 @@ export type PatternDetail = {
   wishCount: number;
   publicProjectCount: number;
   wished: boolean;
-  images: Array<{ key: string | null; thumbnail: boolean }>;
+  images: Array<{ url: string | null; thumbnail: boolean }>;
   gaugeInfo: GaugeInfo;
   sizeInfo: SizeInfo;
 };

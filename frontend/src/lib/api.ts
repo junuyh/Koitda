@@ -70,3 +70,27 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   return data as T;
 }
+
+// 멀티파트 업로드. Content-Type 은 브라우저가 boundary 와 함께 자동 설정하므로 지정하지 않는다.
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = { "X-XSRF-TOKEN": await ensureCsrfToken() };
+  const response = await fetch(`/api/v1${path}`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: formData,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      data?.code ?? "UNKNOWN",
+      data?.message ?? "업로드에 실패했습니다.",
+      data?.fieldErrors ?? {},
+    );
+  }
+  return data as T;
+}

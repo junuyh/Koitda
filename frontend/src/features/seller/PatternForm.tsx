@@ -4,6 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { patternApi } from "@/features/pattern/api";
 import type { SavePatternDraftBody, SellerPatternPreview } from "@/features/seller/api";
+import { ImageUploader } from "@/features/file/ImageUploader";
+
+/** preview 이미지 URL(/api/v1/files/123)에서 fileId 를 뽑는다(수정 진입 프리필용). */
+function fileIdsFromPreview(p?: SellerPatternPreview): number[] {
+  if (!p?.images) return [];
+  return p.images
+    .map((im) => Number((im.url ?? "").split("/").pop()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
 
 /** PATTERN-011 권장 실측 항목(의류). 사이즈 행마다 선택 입력. */
 const MEASURE_COLS: Array<{ key: string; label: string }> = [
@@ -114,6 +123,7 @@ export function PatternForm({
   onSubmit: (body: SavePatternDraftBody) => void;
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? fromPreview(initial) : blankForm));
+  const [imageIds, setImageIds] = useState<number[]>(() => fileIdsFromPreview(initial));
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories } = useQuery({ queryKey: ["pattern-categories"], queryFn: patternApi.categories });
@@ -197,6 +207,8 @@ export function PatternForm({
       description: form.description.trim() || undefined,
       gauge,
       sizes: sizes.length ? sizes : undefined,
+      imageFileIds: imageIds.length ? imageIds : undefined,
+      thumbnailFileId: imageIds[0],
     };
   }
 
@@ -310,7 +322,10 @@ export function PatternForm({
         </Labeled>
       </Section>
 
-      <p className="text-xs text-neutral-400">이미지·PDF 첨부는 파일 업로드 슬라이스에서 지원됩니다. 지금은 텍스트·구조 정보만 저장합니다.</p>
+      <Section title="이미지">
+        <ImageUploader value={imageIds} onChange={setImageIds} usageType="PATTERN_IMAGE" max={7} />
+      </Section>
+      <p className="text-xs text-neutral-400">PDF 도안 파일 첨부는 다운로드 슬라이스에서 추가됩니다.</p>
 
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 

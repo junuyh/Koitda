@@ -65,9 +65,15 @@ export default function PatternDetailPage() {
       <Link href="/patterns" className="text-sm text-neutral-500 hover:underline">← 목록</Link>
 
       <div className="mt-4 grid gap-6 rounded-2xl border border-neutral-200 bg-white p-5 md:grid-cols-2 dark:border-neutral-800 dark:bg-neutral-950">
-        {/* 대표 이미지 자리 */}
-        <div className="flex aspect-square items-center justify-center rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200 text-6xl font-bold text-neutral-300 dark:from-neutral-900 dark:to-neutral-800">
-          {p.title.slice(0, 1)}
+        {/* 대표 이미지 — 깨지면 글자 placeholder 로 폴백 */}
+        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200 text-6xl font-bold text-neutral-300 dark:from-neutral-900 dark:to-neutral-800">
+          <span>{p.title.slice(0, 1)}</span>
+          {(p.images?.find((im) => im.thumbnail)?.url ?? p.images?.[0]?.url) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={(p.images.find((im) => im.thumbnail)?.url ?? p.images[0]?.url) as string} alt={p.title}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="absolute inset-0 h-full w-full object-cover" />
+          )}
         </div>
 
         <div className="flex flex-col">

@@ -49,6 +49,8 @@ export type SavePatternDraftBody = {
   description?: string;
   gauge?: GaugeBody;
   sizes?: SizeRow[];
+  imageFileIds?: number[];
+  thumbnailFileId?: number;
 };
 
 export type DraftSaved = { draftId: number; productStatus: string; missingFields: string[] };
@@ -59,7 +61,7 @@ export type SellerPatternListItem = {
   productStatus: string;
   regularPrice: number | null;
   salePrice: number | null;
-  thumbnailKey: string | null;
+  thumbnailUrl: string | null;
   updatedAt: string | null;
   publishedAt: string | null;
   rejectionReason: string | null;
@@ -87,7 +89,7 @@ export type SellerPatternPreview = {
   rejectionReason: string | null;
   publishedAt: string | null;
   pdfFileId: number | null;
-  images: Array<{ key: string | null; thumbnail: boolean }>;
+  images: Array<{ url: string | null; thumbnail: boolean }>;
   gaugeInfo: { stitches?: number; rows?: number; swatchWidthCm?: number; swatchHeightCm?: number; needleSizeMm?: number } | null;
   sizeInfo: { sizes: Array<{ label: string; castOnStitches: number; measurements?: Record<string, number> }> } | null;
   needleInfo: unknown;

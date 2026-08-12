@@ -129,9 +129,15 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
       <Link href={`/patterns/${pattern.id}`} className="flex flex-col">
-        {/* 대표 이미지 자리 (실제 이미지 배급은 파일 업로드 슬라이스에서) */}
-        <div className="relative flex aspect-square items-center justify-center bg-neutral-100 text-neutral-400 dark:bg-neutral-900">
+        {/* 대표 이미지 — 깨지면 글자 placeholder 로 폴백 */}
+        <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-neutral-100 text-neutral-400 dark:bg-neutral-900">
           <span className="text-3xl font-semibold">{pattern.title.slice(0, 1)}</span>
+          {pattern.thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pattern.thumbnailUrl} alt={pattern.title}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="absolute inset-0 h-full w-full object-cover" />
+          )}
           {pattern.craftType && (
             <span className="absolute left-2 top-2 rounded bg-white/80 px-1.5 py-0.5 text-[11px] font-medium text-neutral-700 dark:bg-black/60 dark:text-neutral-200">
               {CRAFT_LABEL[pattern.craftType] ?? pattern.craftType}

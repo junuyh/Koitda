@@ -39,6 +39,6 @@ public record PatternDetailResponse(
 		@JsonRawValue String needleInfo,
 		@JsonRawValue String techniqueInfo) {
 
-	public record Image(String key, boolean thumbnail) {
+	public record Image(String url, boolean thumbnail) {
 	}
 }

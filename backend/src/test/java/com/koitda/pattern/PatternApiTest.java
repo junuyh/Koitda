@@ -112,7 +112,7 @@ class PatternApiTest {
 
 		mockMvc.perform(get("/api/v1/patterns").param("q", "노출도안ABC"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.items[0].thumbnailKey").isNotEmpty())
+				.andExpect(jsonPath("$.items[0].thumbnailUrl").isNotEmpty())
 				.andExpect(jsonPath("$.items[0].craftType").value("KNIT"))
 				.andExpect(jsonPath("$.items[0].wished").value(false));
 	}

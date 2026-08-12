@@ -94,7 +94,7 @@ public class SellerPatternService {
 	private SellerPatternPreview toPreview(SellingPattern p) {
 		List<SellerPatternPreview.Image> images = imageRepository.findByPattern(p.getId()).stream()
 				.map(i -> new SellerPatternPreview.Image(
-						i.getFile() != null ? i.getFile().getStorageKey() : null, i.isThumbnail()))
+						i.getFile() != null ? PatternQueryService.fileUrl(i.getFile().getId()) : null, i.isThumbnail()))
 				.toList();
 		return new SellerPatternPreview(
 				p.getId(), p.getTitle(), p.getDesignerName(),
@@ -119,7 +119,8 @@ public class SellerPatternService {
 		Map<Long, String> thumbnails = new LinkedHashMap<>();
 		List<Long> ids = patterns.stream().map(SellingPattern::getId).toList();
 		for (SellingPatternImage image : imageRepository.findThumbnails(ids)) {
-			thumbnails.putIfAbsent(image.getPatternId(), thumbnailKey(image));
+			thumbnails.putIfAbsent(image.getPatternId(),
+					image.getFile() != null ? PatternQueryService.fileUrl(image.getFile().getId()) : null);
 		}
 		return patterns.stream().map(p -> new SellerPatternListItem(
 				p.getId(), p.getTitle(), p.getProductStatus().name(),
@@ -342,15 +343,6 @@ public class SellerPatternService {
 			missing.add("pdf");
 		}
 		return missing;
-	}
-
-	private String thumbnailKey(SellingPatternImage image) {
-		if (image.getFile() == null) {
-			return null;
-		}
-		return image.getFile().getThumbnailKey() != null
-				? image.getFile().getThumbnailKey()
-				: image.getFile().getStorageKey();
 	}
 
 	private static boolean positive(Integer v) {

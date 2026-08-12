@@ -10,7 +10,7 @@ public record PatternListItemResponse(
 		Long regularPrice,
 		String difficulty,
 		String craftType,
-		String thumbnailKey,
+		String thumbnailUrl,
 		int wishCount,
 		int publicProjectCount,
 		boolean wished) {
