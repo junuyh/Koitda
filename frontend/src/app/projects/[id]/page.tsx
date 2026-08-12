@@ -8,6 +8,7 @@ import { projectApi, STATUS_LABEL } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { RichEditor } from "@/features/editor/RichEditor";
 import { RichContent } from "@/features/editor/RichContent";
+import { accentOf } from "@/features/ui/accent";
 import type { JSONContent } from "@tiptap/react";
 
 const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
@@ -67,54 +68,78 @@ export default function ProjectDetailPage() {
   const snap = p.patternSnapshot;
   const measureKeys = snap?.sizes?.[0] ? Object.keys(snap.sizes[0].measurements) : [];
 
+  const accent = accentOf(p.id);
+  const cover = p.images?.find((im) => im.url)?.url ?? null;
+  const patternLabel =
+    p.patternType === "EXTERNAL" ? p.external?.title ?? "외부 도안" : snap?.title ?? "코잇다 도안";
+  const designer = p.patternType === "EXTERNAL" ? p.external?.creatorName : snap?.designerName;
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <Link href="/projects" className="text-sm text-neutral-500 hover:underline">← 내 니팅로그</Link>
 
       <div className="mt-4 space-y-4">
-        {/* 헤더 박스 */}
-        <div className={`${box} p-5`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Knitting Log</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight">{p.displayTitle}</h1>
-            </div>
-            <span className="shrink-0 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100">
+        {/* Notion 페이지형 헤더: 커버 + 제목 + 속성 행 */}
+        <div className={`overflow-hidden ${box}`}>
+          {/* 커버 */}
+          <div className={`relative h-40 bg-gradient-to-br sm:h-48 ${accent.wash}`}>
+            {cover && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cover} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+                className="h-full w-full object-cover" />
+            )}
+            <span className={`absolute right-4 top-4 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
               {STATUS_LABEL[p.status] ?? p.status}
             </span>
           </div>
 
-          <dl className="mt-4 space-y-1.5 text-sm">
-            <Row label="도안">
-              {p.patternType === "EXTERNAL" ? p.external?.title ?? "외부 도안" : snap?.title ?? "코잇다 도안"}
-              {p.patternType === "EXTERNAL" && p.external?.creatorName ? ` · ${p.external.creatorName}` : ""}
-            </Row>
-            <Row label="공개">{p.visibility === "PUBLIC" ? "공개" : "비공개"}</Row>
-            {p.note && <Row label="코멘트">{p.note}</Row>}
-          </dl>
+          <div className="p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-400">Knitting Log</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight">{p.displayTitle}</h1>
 
-          <div className="mt-4 flex flex-wrap gap-2 border-t-2 border-dashed border-neutral-200 pt-3 dark:border-neutral-800">
-            <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
-              disabled={changeVisibility.isPending}
-              className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-medium disabled:opacity-50 dark:border-neutral-100">
-              {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
-            </button>
-            <button type="button"
-              onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
-              disabled={trash.isPending}
-              className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-medium text-red-500 disabled:opacity-50">
-              삭제
-            </button>
+            {/* 속성 행 */}
+            <dl className="mt-4 divide-y divide-neutral-100 dark:divide-neutral-900">
+              <Prop icon="🧶" label="도안">
+                {patternLabel}
+                {p.patternType === "EXTERNAL" && (
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${accent.soft}`}>외부</span>
+                )}
+              </Prop>
+              {designer && <Prop icon="✍️" label="원작자">{designer}</Prop>}
+              <Prop icon="📅" label="시작일">{new Date(p.createdAt).toLocaleDateString("ko-KR")}</Prop>
+              <Prop icon="🔓" label="공개">
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${p.visibility === "PUBLIC" ? accent.soft : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"}`}>
+                  {p.visibility === "PUBLIC" ? "공개" : "비공개"}
+                </span>
+              </Prop>
+              {p.note && <Prop icon="💬" label="코멘트">{p.note}</Prop>}
+            </dl>
+
+            <div className="mt-4 flex flex-wrap gap-2 border-t-2 border-dashed border-neutral-200 pt-3 dark:border-neutral-800">
+              <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+                disabled={changeVisibility.isPending}
+                className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-medium disabled:opacity-50 dark:border-neutral-100">
+                {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+              </button>
+              <button type="button"
+                onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
+                disabled={trash.isPending}
+                className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-medium text-red-500 disabled:opacity-50">
+                삭제
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 대표 이미지 */}
-        {p.images && p.images.length > 0 && (
-          <Section title="대표 이미지">
+        {/* 사진 */}
+        {p.images && p.images.filter((im) => im.url).length > 0 && (
+          <Section title="사진">
             <div className="flex flex-wrap gap-2">
               {p.images.filter((im) => im.url).map((im, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={im.url as string} alt="" className="h-28 w-28 rounded-lg border border-neutral-200 object-cover dark:border-neutral-800" />
+                <img key={i} src={im.url as string} alt=""
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  className="h-28 w-28 rounded-xl border-2 border-neutral-900 object-cover dark:border-neutral-100" />
               ))}
             </div>
           </Section>
@@ -262,6 +287,19 @@ function QuickLogForm({
       <button type="submit" disabled={submit.isPending || !docText.trim()}
         className="mt-2 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">기록</button>
     </form>
+  );
+}
+
+// Notion 페이지 속성 행 — 아이콘 + 라벨 + 값
+function Prop({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-2 text-sm">
+      <div className="flex w-28 shrink-0 items-center gap-2 text-neutral-400">
+        <span aria-hidden>{icon}</span>
+        <span>{label}</span>
+      </div>
+      <div className="min-w-0 flex-1 font-medium text-neutral-800 dark:text-neutral-200">{children}</div>
+    </div>
   );
 }
 
