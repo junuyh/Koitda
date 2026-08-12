@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { patternApi } from "@/features/pattern/api";
 import type { SavePatternDraftBody, SellerPatternPreview } from "@/features/seller/api";
 import { ImageUploader } from "@/features/file/ImageUploader";
+import { fileApi } from "@/features/file/api";
 
 /** preview 이미지 URL(/api/v1/files/123)에서 fileId 를 뽑는다(수정 진입 프리필용). */
 function fileIdsFromPreview(p?: SellerPatternPreview): number[] {
@@ -124,6 +125,8 @@ export function PatternForm({
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? fromPreview(initial) : blankForm));
   const [imageIds, setImageIds] = useState<number[]>(() => fileIdsFromPreview(initial));
+  const [pdfId, setPdfId] = useState<number | null>(() => initial?.pdfFileId ?? null);
+  const [pdfUploading, setPdfUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories } = useQuery({ queryKey: ["pattern-categories"], queryFn: patternApi.categories });
@@ -209,6 +212,7 @@ export function PatternForm({
       sizes: sizes.length ? sizes : undefined,
       imageFileIds: imageIds.length ? imageIds : undefined,
       thumbnailFileId: imageIds[0],
+      pdfFileId: pdfId ?? undefined,
     };
   }
 
@@ -325,7 +329,29 @@ export function PatternForm({
       <Section title="이미지">
         <ImageUploader value={imageIds} onChange={setImageIds} usageType="PATTERN_IMAGE" max={7} />
       </Section>
-      <p className="text-xs text-neutral-400">PDF 도안 파일 첨부는 다운로드 슬라이스에서 추가됩니다.</p>
+
+      <Section title="도안 PDF">
+        {pdfId ? (
+          <div className="flex items-center gap-3 text-sm">
+            <span className="rounded-md bg-neutral-100 px-2 py-1 dark:bg-neutral-800">PDF 첨부됨 (#{pdfId})</span>
+            <button type="button" onClick={() => setPdfId(null)} className="text-xs text-red-500 hover:underline">제거</button>
+          </div>
+        ) : (
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-neutral-300 px-3 py-2 text-sm text-neutral-500 dark:border-neutral-700">
+            {pdfUploading ? "올리는 중…" : "+ PDF 선택"}
+            <input type="file" accept="application/pdf" hidden disabled={pdfUploading}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setPdfUploading(true);
+                try { const r = await fileApi.upload(f, "PATTERN_PDF"); setPdfId(r.id); }
+                catch { window.alert("PDF 업로드에 실패했습니다."); }
+                finally { setPdfUploading(false); e.target.value = ""; }
+              }} />
+          </label>
+        )}
+        <p className="mt-1 text-xs text-neutral-400">구매자가 이 PDF를 다운로드합니다. (PDF만, 30MB 이하)</p>
+      </Section>
 
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 

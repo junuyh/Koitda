@@ -17,9 +17,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileService {
 
 	private static final long MAX_IMAGE_BYTES = 15L * 1024 * 1024;
+	private static final long MAX_PDF_BYTES = 30L * 1024 * 1024;
 	private static final Map<String, String> IMAGE_EXT = Map.of(
 			"image/jpeg", ".jpg", "image/png", ".png", "image/webp", ".webp", "image/gif", ".gif");
 	private static final Set<String> IMAGE_USAGE = Set.of("PATTERN_IMAGE", "PROJECT_IMAGE", "REVIEW_IMAGE", "PROFILE");
+	private static final Set<String> PDF_USAGE = Set.of("PATTERN_PDF");
 
 	private final StorageService storage;
 	private final FileAssetRepository fileRepository;
@@ -32,23 +34,33 @@ public class FileService {
 	public record FileContent(String contentType, byte[] bytes) {
 	}
 
-	/** 이미지 업로드. 반환값은 file_asset id. */
+	/** 파일 업로드(이미지·PDF). 용도로 허용 형식·크기를 나눈다. 반환값은 file_asset id. */
 	@Transactional
-	public Long uploadImage(Long uploaderId, String usageTypeRaw, MultipartFile file) {
+	public Long upload(Long uploaderId, String usageTypeRaw, MultipartFile file) {
 		String usageType = (usageTypeRaw == null || usageTypeRaw.isBlank()) ? "PATTERN_IMAGE" : usageTypeRaw;
-		if (!IMAGE_USAGE.contains(usageType)) {
-			throw new ApiException(ErrorCode.VALIDATION_ERROR, "허용되지 않는 용도입니다.");
-		}
 		if (file == null || file.isEmpty()) {
 			throw new ApiException(ErrorCode.VALIDATION_ERROR, "빈 파일입니다.");
 		}
-		if (file.getSize() > MAX_IMAGE_BYTES) {
-			throw new ApiException(ErrorCode.VALIDATION_ERROR, "이미지는 15MB 이하만 업로드할 수 있습니다.");
-		}
 		String contentType = file.getContentType();
-		String ext = contentType == null ? null : IMAGE_EXT.get(contentType);
-		if (ext == null) {
-			throw new ApiException(ErrorCode.UNSUPPORTED_FILE_TYPE, "JPG·PNG·WEBP·GIF 이미지만 업로드할 수 있습니다.");
+		String ext;
+		if (PDF_USAGE.contains(usageType)) {
+			if (file.getSize() > MAX_PDF_BYTES) {
+				throw new ApiException(ErrorCode.VALIDATION_ERROR, "PDF는 30MB 이하만 업로드할 수 있습니다.");
+			}
+			if (!"application/pdf".equals(contentType)) {
+				throw new ApiException(ErrorCode.UNSUPPORTED_FILE_TYPE, "PDF 파일만 업로드할 수 있습니다.");
+			}
+			ext = ".pdf";
+		} else if (IMAGE_USAGE.contains(usageType)) {
+			if (file.getSize() > MAX_IMAGE_BYTES) {
+				throw new ApiException(ErrorCode.VALIDATION_ERROR, "이미지는 15MB 이하만 업로드할 수 있습니다.");
+			}
+			ext = contentType == null ? null : IMAGE_EXT.get(contentType);
+			if (ext == null) {
+				throw new ApiException(ErrorCode.UNSUPPORTED_FILE_TYPE, "JPG·PNG·WEBP·GIF 이미지만 업로드할 수 있습니다.");
+			}
+		} else {
+			throw new ApiException(ErrorCode.VALIDATION_ERROR, "허용되지 않는 용도입니다.");
 		}
 
 		byte[] bytes;

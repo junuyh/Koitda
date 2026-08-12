@@ -33,7 +33,7 @@ public class FileController {
 	public UploadResponse upload(@RequestParam("file") MultipartFile file,
 			@RequestParam(value = "usageType", required = false) String usageType,
 			@AuthenticationPrincipal CustomUserDetails principal) {
-		return new UploadResponse(fileService.uploadImage(principal.getUserId(), usageType, file));
+		return new UploadResponse(fileService.upload(principal.getUserId(), usageType, file));
 	}
 
 	@GetMapping("/{fileId}")

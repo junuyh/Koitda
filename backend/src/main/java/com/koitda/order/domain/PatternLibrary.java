@@ -29,6 +29,12 @@ public class PatternLibrary {
 	@Column(name = "purchased_at", nullable = false, updatable = false)
 	private OffsetDateTime purchasedAt;
 
+	@Column(name = "download_count", nullable = false)
+	private int downloadCount;
+
+	@Column(name = "download_limit", nullable = false)
+	private int downloadLimit = 10;
+
 	@Column(name = "revoked_at")
 	private OffsetDateTime revokedAt;
 
@@ -44,6 +50,18 @@ public class PatternLibrary {
 		return l;
 	}
 
+	/** 다운로드 1회 반영(LIBRARY). 한도를 넘으면 막는다. */
+	public void recordDownload() {
+		if (downloadCount >= downloadLimit) {
+			throw new IllegalStateException("다운로드 한도를 초과했습니다.");
+		}
+		this.downloadCount++;
+	}
+
+	public boolean isRevoked() {
+		return revokedAt != null;
+	}
+
 	public Long getId() {
 		return id;
 	}
@@ -51,4 +69,21 @@ public class PatternLibrary {
 	public Long getPatternId() {
 		return patternId;
 	}
+
+	public Long getUserId() {
+		return userId;
+	}
+
+	public OffsetDateTime getPurchasedAt() {
+		return purchasedAt;
+	}
+
+	public int getDownloadCount() {
+		return downloadCount;
+	}
+
+	public int getDownloadLimit() {
+		return downloadLimit;
+	}
 }
+

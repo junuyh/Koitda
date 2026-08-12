@@ -35,4 +35,16 @@ public final class OrderDtos {
 					v.getPurchasedAt().atOffset(ZoneOffset.UTC), v.getRevoked());
 		}
 	}
+
+	/** 구매 도안 상세(LIBRARY) — 다운로드 화면용. */
+	public record LibraryDetailResponse(
+			Long patternId,
+			String patternTitle,
+			String sellerBrand,
+			OffsetDateTime purchasedAt,
+			boolean revoked,
+			boolean hasPdf,
+			int downloadCount,
+			int downloadLimit) {
+	}
 }

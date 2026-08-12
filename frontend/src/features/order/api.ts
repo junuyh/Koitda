@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 
 export type Purchasability = { canPurchase: boolean; reason: string | null; usablePoint: number };
 export type Order = { id: number; orderNo: string; totalAmount: number; paymentAmount: number; status: string };
@@ -20,4 +20,52 @@ export const orderApi = {
       method: "POST",
     }),
   myLibrary: () => apiFetch<LibraryItem[]>("/users/me/pattern-library"),
+  libraryDetail: (patternId: number) =>
+    apiFetch<LibraryDetail>(`/users/me/pattern-library/${patternId}`),
+  // PDF 다운로드: POST 로 바이트를 받아 브라우저 다운로드를 트리거한다.
+  downloadPdf: async (patternId: number, fallbackName: string) => {
+    const csrf = getCookie("XSRF-TOKEN");
+    const res = await fetch(`/api/v1/pattern-library/${patternId}/download`, {
+      method: "POST",
+      credentials: "include",
+      headers: csrf ? { "X-XSRF-TOKEN": decodeURIComponent(csrf) } : {},
+    });
+    if (!res.ok) {
+      let msg = "다운로드에 실패했습니다.";
+      try { const j = await res.json(); msg = j?.message ?? msg; } catch {}
+      throw new ApiError(res.status, "DOWNLOAD_FAILED", msg);
+    }
+    const blob = await res.blob();
+    const name = filenameFromDisposition(res.headers.get("Content-Disposition")) ?? fallbackName;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(url);
+    return { remaining: Number(res.headers.get("X-Download-Remaining") ?? "0") };
+  },
 };
+
+export type LibraryDetail = {
+  patternId: number;
+  patternTitle: string;
+  sellerBrand: string | null;
+  purchasedAt: string;
+  revoked: boolean;
+  hasPdf: boolean;
+  downloadCount: number;
+  downloadLimit: number;
+};
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? m[1] : null;
+}
+
+function filenameFromDisposition(v: string | null): string | null {
+  if (!v) return null;
+  const star = v.match(/filename\*=UTF-8''([^;]+)/i);
+  if (star) return decodeURIComponent(star[1]);
+  const plain = v.match(/filename="?([^";]+)"?/i);
+  return plain ? plain[1] : null;
+}

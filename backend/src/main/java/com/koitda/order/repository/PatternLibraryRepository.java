@@ -14,6 +14,9 @@ public interface PatternLibraryRepository extends JpaRepository<PatternLibrary, 
 	/** 리뷰 작성 자격(REVIEW-002) — 구매 이력. 환불(회수) 후에도 리뷰 근거로 유지되므로 revoked 무관. */
 	java.util.Optional<PatternLibrary> findFirstByUserIdAndPatternIdOrderByPurchasedAtAsc(Long userId, Long patternId);
 
+	/** 다운로드 자격 — 회수되지 않은 활성 사용권. */
+	java.util.Optional<PatternLibrary> findFirstByUserIdAndPatternIdAndRevokedAtIsNull(Long userId, Long patternId);
+
 	/** 구매 도안 목록 — 도안명·카테고리·구매일·회수 여부. */
 	@Query(value = """
 			SELECT pl.pattern_id                 AS patternId,

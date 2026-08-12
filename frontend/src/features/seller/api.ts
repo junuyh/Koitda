@@ -51,6 +51,7 @@ export type SavePatternDraftBody = {
   sizes?: SizeRow[];
   imageFileIds?: number[];
   thumbnailFileId?: number;
+  pdfFileId?: number;
 };
 
 export type DraftSaved = { draftId: number; productStatus: string; missingFields: string[] };

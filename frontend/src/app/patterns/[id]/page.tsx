@@ -132,7 +132,7 @@ export default function PatternDetailPage() {
                 로그인 후 구매
               </Link>
             ) : purchasability && !purchasability.canPurchase && purchasability.reason?.includes("보유") ? (
-              <Link href="/library" className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700">
+              <Link href={`/library/${p.id}`} className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700">
                 구매 도안 보기
               </Link>
             ) : (

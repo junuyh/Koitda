@@ -32,11 +32,17 @@ export default function LibraryPage() {
                   {it.categoryName ?? "도안"} · 구매일 {it.purchasedAt.slice(0, 10)}
                 </p>
               </Link>
-              {it.revoked && (
-                <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 dark:bg-neutral-800">
-                  환불됨
-                </span>
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                {it.revoked && (
+                  <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 dark:bg-neutral-800">환불됨</span>
+                )}
+                {!it.revoked && (
+                  <Link href={`/library/${it.patternId}`}
+                    className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+                    다운로드
+                  </Link>
+                )}
+              </div>
             </li>
           ))}
         </ul>
