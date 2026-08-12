@@ -197,6 +197,17 @@ public class ProjectService {
 				.map(ProjectListItemResponse::from).toList();
 	}
 
+	/** 공개 니팅로그 피드(둘러보기). sort=likes|recent, 오프셋 페이지네이션. 비로그인도 조회. */
+	@Transactional(readOnly = true)
+	public List<com.koitda.project.dto.ProjectFeedItemResponse> publicFeed(String sort, int page, int size) {
+		int pageSize = Math.min(Math.max(size, 1), 100);
+		int offset = Math.max(page, 0) * pageSize;
+		var views = "likes".equalsIgnoreCase(sort)
+				? projectRepository.findPublicFeedByLikes(pageSize, offset)
+				: projectRepository.findPublicFeedRecent(pageSize, offset);
+		return views.stream().map(com.koitda.project.dto.ProjectFeedItemResponse::from).toList();
+	}
+
 	/** 코잇기 — 연결 도안 기준 그룹 목록. */
 	@Transactional(readOnly = true)
 	public List<ProjectGroupResponse> groupedByPattern(Long userId) {

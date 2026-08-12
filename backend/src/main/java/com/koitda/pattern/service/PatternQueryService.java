@@ -84,6 +84,22 @@ public class PatternQueryService {
 		return PageResponse.of(page, assemble(page.getContent(), userId));
 	}
 
+	/** 베스트셀러 도안 상위 N개(구매수 기준). 홈 가로 스크롤용. */
+	@Transactional(readOnly = true)
+	public List<PatternListItemResponse> bestSellers(Long userId, int limit) {
+		List<Long> ids = patternRepository.findBestSellerIds(limit);
+		if (ids.isEmpty()) {
+			return List.of();
+		}
+		// findAllById 는 순서를 보장하지 않으므로 베스트셀러 순위대로 재정렬한다.
+		Map<Long, SellingPattern> byId = new HashMap<>();
+		for (SellingPattern p : patternRepository.findAllById(ids)) {
+			byId.put(p.getId(), p);
+		}
+		List<SellingPattern> ordered = ids.stream().map(byId::get).filter(p -> p != null).toList();
+		return assemble(ordered, userId);
+	}
+
 	@Transactional(readOnly = true)
 	public PageResponse<PatternListItemResponse> listWished(Long userId, Pageable pageable) {
 		Page<SellingPattern> page = wishRepository.findWishedPatterns(userId, pageable);

@@ -7,6 +7,7 @@ export type ProjectListItem = {
   visibility: string;
   patternTitle: string | null;
   patternType: string;
+  thumbnailUrl: string | null;
   createdAt: string;
 };
 
@@ -76,8 +77,20 @@ export const STATUS_LABEL: Record<string, string> = {
   FO: "완성",
 };
 
+export type FeedItem = {
+  id: number;
+  displayTitle: string;
+  status: string;
+  authorNickname: string;
+  thumbnailUrl: string | null;
+  likeCount: number;
+  createdAt: string;
+};
+
 export const projectApi = {
   mine: () => apiFetch<ProjectListItem[]>("/projects/mine"),
+  feed: (sort: "recent" | "likes" = "recent", page = 0, size = 12) =>
+    apiFetch<FeedItem[]>(`/projects/feed?sort=${sort}&page=${page}&size=${size}`),
   get: (id: number) => apiFetch<ProjectDetail>(`/projects/${id}`),
   create: (body: CreateProjectBody) =>
     apiFetch<{ id: number; displayTitle: string }>("/projects", { method: "POST", body }),

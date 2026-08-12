@@ -8,6 +8,7 @@ import { patternApi } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
 import { ReviewSection } from "@/features/review/ReviewSection";
 import { RichContent } from "@/features/editor/RichContent";
+import { accentOf } from "@/features/ui/accent";
 import type { JSONContent } from "@tiptap/react";
 import { ApiError } from "@/lib/api";
 
@@ -61,35 +62,42 @@ export default function PatternDetailPage() {
   const measurementKeys = p.sizeInfo?.sizes?.[0]
     ? Object.keys(p.sizeInfo.sizes[0].measurements)
     : [];
+  const accent = accentOf(p.id);
+  const cover = p.images?.find((im) => im.thumbnail)?.url ?? p.images?.[0]?.url;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
-      <Link href="/patterns" className="text-sm text-neutral-500 hover:underline">← 목록</Link>
+      <Link href="/patterns" className="text-sm font-bold text-neutral-500 hover:underline">← 목록</Link>
 
-      <div className="mt-4 grid gap-6 rounded-2xl border border-neutral-200 bg-white p-5 md:grid-cols-2 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="mt-4 grid gap-6 overflow-hidden rounded-3xl border-2 border-neutral-900 bg-white p-5 md:grid-cols-2 dark:border-neutral-100 dark:bg-neutral-950">
         {/* 대표 이미지 — 깨지면 글자 placeholder 로 폴백 */}
-        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200 text-6xl font-bold text-neutral-300 dark:from-neutral-900 dark:to-neutral-800">
+        <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border-2 border-neutral-900 bg-gradient-to-br text-6xl font-black text-neutral-900/20 dark:border-neutral-100 dark:text-neutral-100/20 ${accent.wash}`}>
           <span>{p.title.slice(0, 1)}</span>
-          {(p.images?.find((im) => im.thumbnail)?.url ?? p.images?.[0]?.url) && (
+          {cover && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={(p.images.find((im) => im.thumbnail)?.url ?? p.images[0]?.url) as string} alt={p.title}
+            <img src={cover as string} alt={p.title}
               onError={(e) => { e.currentTarget.style.display = "none"; }}
               className="absolute inset-0 h-full w-full object-cover" />
+          )}
+          {p.craftType && (
+            <span className={`absolute left-3 top-3 rounded-full border-2 border-neutral-900 px-2.5 py-0.5 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
+              {CRAFT_LABEL[p.craftType] ?? p.craftType}
+            </span>
           )}
         </div>
 
         <div className="flex flex-col">
           {p.categoryName && (
-            <span className="inline-block w-fit rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">{p.categoryName}</span>
+            <span className={`inline-block w-fit rounded-full px-3 py-0.5 text-xs font-semibold ${accent.soft}`}>{p.categoryName}</span>
           )}
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">{p.title}</h1>
+          <h1 className="mt-2 text-3xl font-black tracking-tight">{p.title}</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {p.designerName ?? "원작자 미상"}
             {p.sellerBrand && ` · ${p.sellerBrand}`}
           </p>
 
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-bold">
+            <span className="text-3xl font-black">
               {p.salePrice != null ? `${p.salePrice.toLocaleString()}원` : "-"}
             </span>
             {p.regularPrice != null && p.regularPrice !== p.salePrice && (
@@ -99,7 +107,7 @@ export default function PatternDetailPage() {
             )}
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-y-1 text-sm">
+          <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-sm">
             <Meta label="뜨개 방식" value={p.craftType ? CRAFT_LABEL[p.craftType] : null} />
             <Meta label="난이도" value={p.difficulty} />
             <Meta label="언어" value={p.language} />
@@ -117,24 +125,24 @@ export default function PatternDetailPage() {
               }}
               disabled={wish.isPending}
               aria-pressed={p.wished}
-              className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+              className="rounded-full border-2 border-neutral-900 px-4 py-2 text-sm font-bold dark:border-neutral-100"
             >
               {p.wished ? "♥ 위시 담김" : "♡ 위시 담기"}
             </button>
             <Link
               href={me ? `/projects/new?sellingPatternId=${p.id}` : "/login"}
-              className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+              className="rounded-full border-2 border-neutral-900 px-4 py-2 text-sm font-bold dark:border-neutral-100"
             >
               니팅로그 만들기
             </Link>
 
             {/* 구매 상태별 버튼(ORDER-005) */}
             {!me ? (
-              <Link href="/login" className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+              <Link href="/login" className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
                 로그인 후 구매
               </Link>
             ) : purchasability && !purchasability.canPurchase && purchasability.reason?.includes("보유") ? (
-              <Link href={`/library/${p.id}`} className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700">
+              <Link href={`/library/${p.id}`} className={`rounded-full border-2 border-neutral-900 px-4 py-2 text-sm font-bold dark:border-neutral-100 ${accent.solid}`}>
                 구매 도안 보기
               </Link>
             ) : (
@@ -142,7 +150,7 @@ export default function PatternDetailPage() {
                 type="button"
                 onClick={() => purchase.mutate()}
                 disabled={purchase.isPending || !purchasability?.canPurchase}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+                className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
               >
                 {purchase.isPending ? "구매 중…" : `구매하기${p.salePrice != null ? ` · ${p.salePrice.toLocaleString()}원` : ""}`}
               </button>
@@ -169,11 +177,11 @@ export default function PatternDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 text-left dark:border-neutral-800">
-                  <th className="py-2 pr-4 font-medium">사이즈</th>
-                  <th className="py-2 pr-4 font-medium">시작 콧수</th>
+                <tr className="border-b-2 border-neutral-900 text-left dark:border-neutral-100">
+                  <th className="py-2 pr-4 font-bold">사이즈</th>
+                  <th className="py-2 pr-4 font-bold">시작 콧수</th>
                   {measurementKeys.map((k) => (
-                    <th key={k} className="py-2 pr-4 font-medium">{MEASURE_LABEL[k] ?? k}</th>
+                    <th key={k} className="py-2 pr-4 font-bold">{MEASURE_LABEL[k] ?? k}</th>
                   ))}
                 </tr>
               </thead>
@@ -229,8 +237,8 @@ function Empty() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">{title}</h2>
+    <section className="rounded-2xl border-2 border-neutral-900 bg-white p-5 dark:border-neutral-100 dark:bg-neutral-950">
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-neutral-400">{title}</h2>
       {children}
     </section>
   );
@@ -240,8 +248,8 @@ function Meta({ label, value }: { label: string; value: string | null | undefine
   if (!value) return null;
   return (
     <>
-      <dt className="text-neutral-500">{label}</dt>
-      <dd>{value}</dd>
+      <dt className="text-neutral-400">{label}</dt>
+      <dd className="font-semibold">{value}</dd>
     </>
   );
 }

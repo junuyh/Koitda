@@ -49,6 +49,15 @@ public class ProjectController {
 		return projectService.myProjects(principal.getUserId());
 	}
 
+	/** 공개 니팅로그 피드(둘러보기, PROJECT-피드). 비로그인도 조회 가능. sort=likes|recent. */
+	@GetMapping("/feed")
+	public List<com.koitda.project.dto.ProjectFeedItemResponse> feed(
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "recent") String sort,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "12") int size) {
+		return projectService.publicFeed(sort, page, size);
+	}
+
 	/** 휴지통 목록(DATA-003). */
 	@GetMapping("/trash")
 	public List<TrashItemResponse> trash(@AuthenticationPrincipal CustomUserDetails principal) {

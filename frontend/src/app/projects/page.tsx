@@ -66,6 +66,12 @@ function ProjectCard({ p }: { p: ProjectListItem }) {
         {/* 커버 — 이미지가 없으므로 accent 그라데이션 + 이니셜 */}
         <div className={`relative flex aspect-[4/3] items-center justify-center overflow-hidden border-b-2 border-neutral-900 bg-gradient-to-br text-4xl font-black text-neutral-900/20 dark:border-neutral-100 dark:text-neutral-100/20 ${accent.wash}`}>
           <span>{p.displayTitle.slice(0, 1)}</span>
+          {p.thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.thumbnailUrl} alt=""
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="absolute inset-0 h-full w-full object-cover" />
+          )}
           <span className={`absolute left-2 top-2 rounded-full border border-neutral-900 px-2 py-0.5 text-[11px] font-bold dark:border-neutral-100 ${STATUS_TONE[p.status] ?? STATUS_TONE.PLANNED}`}>
             {STATUS_LABEL[p.status] ?? p.status}
           </span>

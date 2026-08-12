@@ -48,6 +48,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
 						// 공개 니팅로그의 적용 게이지 계산은 비로그인도 조회 가능(GAUGE-014)
 						.requestMatchers(HttpMethod.GET, "/api/v1/projects/*/gauge-calculation").permitAll()
+						// 공개 니팅로그 피드(둘러보기)는 비로그인도 조회 가능
+						.requestMatchers(HttpMethod.GET, "/api/v1/projects/feed").permitAll()
 						// 파일 서빙(이미지)은 공개, 업로드는 인증 필요
 						.requestMatchers(HttpMethod.GET, "/api/v1/files/*").permitAll()
 						.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

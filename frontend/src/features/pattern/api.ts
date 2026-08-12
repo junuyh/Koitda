@@ -101,6 +101,9 @@ function toQuery(params: PatternListParams): string {
 export const patternApi = {
   list: (params: PatternListParams) =>
     apiFetch<PageResponse<PatternListItem>>(`/patterns${toQuery(params)}`),
+  // 최신 등록순은 백엔드 기본 정렬(publishedAt desc)이라 별도 파라미터가 필요 없다.
+  latest: (size = 12) => apiFetch<PageResponse<PatternListItem>>(`/patterns?size=${size}`),
+  bestSellers: (limit = 12) => apiFetch<PatternListItem[]>(`/patterns/best-sellers?limit=${limit}`),
   get: (id: number) => apiFetch<PatternDetail>(`/patterns/${id}`),
   categories: () => apiFetch<Category[]>("/pattern-categories"),
   addWish: (id: number) => apiFetch<WishResult>(`/patterns/${id}/wish`, { method: "POST" }),

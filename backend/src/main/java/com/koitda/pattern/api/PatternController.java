@@ -40,6 +40,15 @@ public class PatternController {
 		return patternQueryService.search(q, categoryId, craftType, difficulty, minPrice, maxPrice, userId, pageable);
 	}
 
+	/** 베스트셀러 도안(홈 가로 스크롤). 구매수 기준 상위 N개. 비로그인도 조회 가능. */
+	@GetMapping("/best-sellers")
+	public java.util.List<PatternListItemResponse> bestSellers(
+			@RequestParam(defaultValue = "12") int limit,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		Long userId = (principal != null) ? principal.getUserId() : null;
+		return patternQueryService.bestSellers(userId, Math.min(Math.max(limit, 1), 30));
+	}
+
 	/** 도안 상세(PATTERN-004). 비로그인도 조회 가능. */
 	@GetMapping("/{patternId}")
 	public PatternDetailResponse detail(

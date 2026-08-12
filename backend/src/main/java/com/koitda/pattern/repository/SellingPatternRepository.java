@@ -21,6 +21,21 @@ public interface SellingPatternRepository extends JpaRepository<SellingPattern, 
 	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "seller")
 	Optional<SellingPattern> findByIdAndSeller_Id(Long id, Long sellerId);
 
+	/**
+	 * 베스트셀러 도안 id — 회수되지 않은 구매(pattern_library) 수 기준 내림차순.
+	 * 판매 실적이 없으면 위시수·최신순으로 보완한다. APPROVED 도안만.
+	 */
+	@Query(value = """
+			SELECT sp.id
+			FROM selling_pattern sp
+			LEFT JOIN pattern_library pl ON pl.pattern_id = sp.id AND pl.revoked_at IS NULL
+			WHERE sp.product_status = 'APPROVED'
+			GROUP BY sp.id
+			ORDER BY COUNT(pl.id) DESC, sp.wish_count DESC, sp.published_at DESC NULLS LAST
+			LIMIT :limit
+			""", nativeQuery = true)
+	java.util.List<Long> findBestSellerIds(@Param("limit") int limit);
+
 	/** 내 도안 목록(GET /seller/patterns). status 가 null 이면 전체 상태. */
 	@Query("""
 			select p from SellingPattern p
