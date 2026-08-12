@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { projectApi, STATUS_LABEL, type LogItem } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { RichEditor } from "@/features/editor/RichEditor";
@@ -44,6 +45,35 @@ function extractImages(doc: unknown): string[] {
   };
   walk(doc);
   return out;
+}
+
+// 블록 하나의 텍스트만 이어붙인다(이미지 등 비텍스트 무시).
+function blockText(block: unknown): string {
+  let t = "";
+  const walk = (n: unknown) => {
+    if (!n || typeof n !== "object") return;
+    const node = n as { type?: string; text?: string; content?: unknown[] };
+    if (node.type === "text" && node.text) t += node.text;
+    if (Array.isArray(node.content)) node.content.forEach(walk);
+  };
+  walk(block);
+  return t.trim();
+}
+
+// 리스트에서 보여줄 한 줄 요약: 이미지 제외 첫 텍스트 줄, 표면 "표".
+function logSnippet(doc: unknown, fallback: string | null): string {
+  const content = (doc as { content?: unknown[] } | null)?.content;
+  if (Array.isArray(content)) {
+    for (const block of content) {
+      const b = block as { type?: string } | null;
+      if (!b || typeof b !== "object") continue;
+      if (b.type === "image") continue;
+      if (b.type === "table") return "표";
+      const t = blockText(block);
+      if (t) return t;
+    }
+  }
+  return (fallback ?? "").split("\n").map((s) => s.trim()).find(Boolean) ?? "";
 }
 
 export default function ProjectDetailPage() {
@@ -111,19 +141,35 @@ export default function ProjectDetailPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <Link href="/projects" className="text-sm text-neutral-500 hover:underline">← 내 니팅로그</Link>
+      {/* 상단 행: 뒤로 + (우측 끝) 공개 전환·삭제 */}
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/projects" className="text-sm font-bold text-neutral-500 hover:underline">← 내 니팅로그</Link>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+            disabled={changeVisibility.isPending}
+            className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-bold disabled:opacity-50 dark:border-neutral-100">
+            {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+          </button>
+          <button type="button"
+            onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
+            disabled={trash.isPending}
+            className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-bold text-red-500 disabled:opacity-50">
+            삭제
+          </button>
+        </div>
+      </div>
 
       <div className="mt-4 space-y-4">
-        {/* Notion 페이지형 헤더: 커버 + 제목 + 속성 행 */}
+        {/* Notion 페이지형 헤더: 커버(대표 이미지) + 제목 + 속성 행 */}
         <div className={`overflow-hidden ${box}`}>
-          {/* 커버 */}
+          {/* 커버 = 대표 이미지. 상태는 좌측, 사진 관리 버튼은 우측. */}
           <div className={`relative h-40 bg-gradient-to-br sm:h-48 ${accent.wash}`}>
             {cover && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={cover} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
                 className="h-full w-full object-cover" />
             )}
-            <span className={`absolute right-4 top-4 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
+            <span className={`absolute left-4 top-4 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
               {STATUS_LABEL[p.status] ?? p.status}
             </span>
           </div>
@@ -149,36 +195,8 @@ export default function ProjectDetailPage() {
               </Prop>
               {p.note && <Prop icon="💬" label="코멘트">{p.note}</Prop>}
             </dl>
-
-            <div className="mt-4 flex flex-wrap gap-2 border-t-2 border-dashed border-neutral-200 pt-3 dark:border-neutral-800">
-              <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
-                disabled={changeVisibility.isPending}
-                className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-medium disabled:opacity-50 dark:border-neutral-100">
-                {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
-              </button>
-              <button type="button"
-                onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
-                disabled={trash.isPending}
-                className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-medium text-red-500 disabled:opacity-50">
-                삭제
-              </button>
-            </div>
           </div>
         </div>
-
-        {/* 사진 */}
-        {p.images && p.images.filter((im) => im.url).length > 0 && (
-          <Section title="사진">
-            <div className="flex flex-wrap gap-2">
-              {p.images.filter((im) => im.url).map((im, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={im.url as string} alt=""
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  className="h-28 w-28 rounded-xl border-2 border-neutral-900 object-cover dark:border-neutral-100" />
-              ))}
-            </div>
-          </Section>
-        )}
 
         {/* 원작 스냅샷 */}
         {(snap?.gauge || (snap?.sizes && snap.sizes.length > 0)) && (
@@ -252,7 +270,7 @@ export default function ProjectDetailPage() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">오늘의 로그</h2>
             <button type="button" onClick={() => setWriteOpen(true)}
-              className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-1.5 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
+              className="rounded-full border-2 border-neutral-900 bg-lime-300 px-4 py-1.5 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100">
               + 오늘의 로그
             </button>
           </div>
@@ -283,7 +301,7 @@ export default function ProjectDetailPage() {
                                 </span>
                                 <span className="line-clamp-1 text-sm font-bold">{l.displayTitle}</span>
                               </div>
-                              {l.comment && <p className="mt-1.5 line-clamp-2 text-sm text-neutral-500">{l.comment}</p>}
+                              {(() => { const s = logSnippet(l.contentDocument, l.comment); return s ? <p className="mt-1.5 line-clamp-1 text-sm text-neutral-500">{s}</p> : null; })()}
                             </div>
                             {/* 우: 날짜 + 그 아래 대표 이미지 썸네일 */}
                             <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -327,7 +345,7 @@ export default function ProjectDetailPage() {
       {openLog && <LogModal log={openLog} onClose={() => setOpenLog(null)} />}
 
       {writeOpen && (
-        <Modal onClose={() => setWriteOpen(false)} maxWidth="max-w-2xl">
+        <Modal onClose={() => setWriteOpen(false)} maxWidth="max-w-3xl">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-black tracking-tight">오늘의 로그 작성</h3>
             <button type="button" onClick={() => setWriteOpen(false)} aria-label="닫기"
@@ -345,8 +363,8 @@ export default function ProjectDetailPage() {
   );
 }
 
-/** 모달 공통 셸 — 배경 딤·Esc·배경 스크롤 잠금. */
-function Modal({ onClose, children, maxWidth = "max-w-lg" }: { onClose: () => void; children: React.ReactNode; maxWidth?: string }) {
+/** 모달 공통 셸 — 배경 딤·Esc·스크롤 잠금. body 포털로 렌더해 뷰포트 정중앙에 고정. */
+function Modal({ onClose, children, maxWidth = "max-w-2xl" }: { onClose: () => void; children: React.ReactNode; maxWidth?: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -354,13 +372,15 @@ function Modal({ onClose, children, maxWidth = "max-w-lg" }: { onClose: () => vo
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  return (
+  if (typeof document === "undefined") return null; // SSR 가드
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
       <div className={`relative z-10 max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-3xl border-2 border-neutral-900 bg-white p-6 dark:border-neutral-100 dark:bg-neutral-950`}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -404,6 +424,7 @@ function QuickLogForm({
   projectId, currentStatus, projectVisibility, onDone,
 }: { projectId: number; currentStatus: string; projectVisibility: string; onDone: () => void }) {
   const [status, setStatus] = useState("CO");
+  const [title, setTitle] = useState("");
   const [docJson, setDocJson] = useState<JSONContent | null>(null);
   const [docText, setDocText] = useState("");
   const [makePublic, setMakePublic] = useState(false);
@@ -416,6 +437,7 @@ function QuickLogForm({
       const hasBody = docText.trim().length > 0;
       const body: Parameters<typeof projectApi.createLog>[1] = {
         knittingStatus: status,
+        title: title.trim() || undefined,
         comment: docText.trim() || undefined,
         contentDocument: hasBody ? (docJson ?? undefined) : undefined,
       };
@@ -427,7 +449,7 @@ function QuickLogForm({
       }
       return projectApi.createLog(projectId, body);
     },
-    onSuccess: () => { setDocJson(null); setDocText(""); setMakePublic(false); setEditorKey((k) => k + 1); onDone(); },
+    onSuccess: () => { setTitle(""); setDocJson(null); setDocText(""); setMakePublic(false); setEditorKey((k) => k + 1); onDone(); },
   });
 
   return (
@@ -442,10 +464,15 @@ function QuickLogForm({
           이 로그 공개
         </label>
       </div>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60}
+        placeholder="제목 (비우면 날짜로 자동 지정)" aria-label="로그 제목"
+        className="mb-2 w-full rounded-xl border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm font-bold outline-none dark:border-neutral-100" />
       <RichEditor key={editorKey} usageType="PROJECT_IMAGE" placeholder="오늘의 기록 — 줄글·사진·표"
         onChange={(v) => { setDocJson(v.json); setDocText(v.text); }} />
-      <button type="submit" disabled={submit.isPending || !docText.trim()}
-        className="mt-2 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">기록</button>
+      <div className="mt-3 flex justify-center">
+        <button type="submit" disabled={submit.isPending || !docText.trim()}
+          className="rounded-full border-2 border-neutral-900 bg-lime-300 px-8 py-2 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100">기록</button>
+      </div>
     </form>
   );
 }

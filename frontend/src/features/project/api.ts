@@ -7,6 +7,8 @@ export type ProjectListItem = {
   visibility: string;
   patternTitle: string | null;
   patternType: string;
+  sellingPatternId: number | null;
+  externalPatternId: number | null;
   thumbnailUrl: string | null;
   createdAt: string;
 };

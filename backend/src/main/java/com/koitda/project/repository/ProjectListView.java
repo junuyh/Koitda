@@ -14,6 +14,8 @@ public interface ProjectListView {
 
 	String getPatternTitle();
 
+	Long getSellingPatternId();
+
 	Long getExternalPatternId();
 
 	/** 대표 이미지(sort_order 최소) file_asset id. 없으면 null. */

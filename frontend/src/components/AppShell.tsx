@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { href: "/patterns", label: "도안", icon: <Icon d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" /> },
   { href: "/explore", label: "둘러보기", icon: <Icon d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" /> },
   { href: "/projects", label: "내 니팅로그", icon: <Icon d="M12 20h9M3 20h3M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /> },
+  { href: "/coitgi", label: "코잇기", icon: <Icon d="M4 7h16M4 12h16M4 17h10M2 7v10M22 7v10" /> },
   { href: "/library", label: "구매 도안", icon: <Icon d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" /> },
   { href: "/seller/patterns", label: "판매", role: "SELLER", icon: <Icon d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3a1 1 0 0 0 .7 1.7H17M9 20a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm7 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" /> },
   { href: "/admin", label: "심사", role: "ADMIN", icon: <Icon d="M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z" /> },

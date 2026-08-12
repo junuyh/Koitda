@@ -44,6 +44,7 @@ public interface KnittingProjectRepository extends JpaRepository<KnittingProject
 			       kp.status                 AS status,
 			       kp.visibility             AS visibility,
 			       COALESCE(sp.title, ep.title) AS patternTitle,
+			       kp.selling_pattern_id      AS sellingPatternId,
 			       kp.external_pattern_id     AS externalPatternId,
 			       (SELECT pi.file_id FROM project_image pi
 			         WHERE pi.project_id = kp.id
