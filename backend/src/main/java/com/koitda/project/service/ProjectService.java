@@ -24,7 +24,9 @@ import com.koitda.project.dto.VisibilityImpactResponse;
 import java.time.OffsetDateTime;
 import com.koitda.project.repository.ExternalPatternRepository;
 import com.koitda.project.repository.KnittingProjectRepository;
+import com.koitda.project.domain.ProjectImage;
 import com.koitda.project.repository.ProjectGaugeRepository;
+import com.koitda.project.repository.ProjectImageRepository;
 import com.koitda.project.repository.ProjectNeedleRepository;
 import com.koitda.project.repository.ProjectYarnRepository;
 import java.time.LocalDate;
@@ -47,14 +49,18 @@ public class ProjectService {
 	private final ProjectYarnRepository yarnRepository;
 	private final ProjectNeedleRepository needleRepository;
 	private final ProjectGaugeRepository gaugeRepository;
+	private final ProjectImageRepository imageRepository;
 	private final ContentPostRepository contentPostRepository;
+	private final com.koitda.file.repository.FileAssetRepository fileAssetRepository;
 	private final ObjectMapper objectMapper;
 
 	public ProjectService(KnittingProjectRepository projectRepository,
 			ExternalPatternRepository externalRepository,
 			SellingPatternRepository sellingPatternRepository,
 			ProjectYarnRepository yarnRepository, ProjectNeedleRepository needleRepository,
-			ProjectGaugeRepository gaugeRepository, ContentPostRepository contentPostRepository,
+			ProjectGaugeRepository gaugeRepository, ProjectImageRepository imageRepository,
+			ContentPostRepository contentPostRepository,
+			com.koitda.file.repository.FileAssetRepository fileAssetRepository,
 			ObjectMapper objectMapper) {
 		this.projectRepository = projectRepository;
 		this.externalRepository = externalRepository;
@@ -62,7 +68,9 @@ public class ProjectService {
 		this.yarnRepository = yarnRepository;
 		this.needleRepository = needleRepository;
 		this.gaugeRepository = gaugeRepository;
+		this.imageRepository = imageRepository;
 		this.contentPostRepository = contentPostRepository;
+		this.fileAssetRepository = fileAssetRepository;
 		this.objectMapper = objectMapper;
 	}
 
@@ -231,10 +239,15 @@ public class ProjectService {
 
 		String patternType = (p.getExternalPatternId() != null) ? "EXTERNAL" : "CATALOG";
 
+		List<ProjectDetailResponse.Image> images = imageRepository.findByProject(projectId).stream()
+				.map(pi -> new ProjectDetailResponse.Image(
+						pi.getFile() != null ? "/api/v1/files/" + pi.getFile().getId() : null))
+				.toList();
+
 		return new ProjectDetailResponse(p.getId(), p.getTitle(), p.getDisplayTitle(),
 				p.getStatus().name(), p.getVisibility().name(), p.getPublicLogCount(), p.getNote(),
 				p.getCreatedAt(), patternType, p.getSellingPatternId(), p.getExternalPatternId(),
-				p.getPatternSnapshot(), external, yarns, needles, gauges);
+				p.getPatternSnapshot(), external, yarns, needles, gauges, images);
 	}
 
 	// ---- helpers ----
@@ -300,6 +313,17 @@ public class ProjectService {
 		for (CreateProjectRequest.GaugeInput g : req.gaugesOrEmpty()) {
 			gaugeRepository.save(new ProjectGauge(projectId, g.stitches(), g.rows(), g.swatchWidthCm(),
 					g.swatchHeightCm(), g.needleSizeMm(), g.measuredStage(), i++));
+		}
+		// 대표 이미지(PROJECT-010) — 최대 7개. file_id 참조만 저장한다.
+		i = 0;
+		for (Long fileId : req.imageFileIdsOrEmpty()) {
+			if (i >= 7) {
+				break;
+			}
+			if (fileId == null || !fileAssetRepository.existsById(fileId)) {
+				throw new ApiException(ErrorCode.VALIDATION_ERROR, "존재하지 않는 이미지 파일입니다.");
+			}
+			imageRepository.save(new ProjectImage(projectId, fileAssetRepository.getReferenceById(fileId), i++));
 		}
 	}
 }

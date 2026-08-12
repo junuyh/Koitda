@@ -34,6 +34,7 @@ export type ProjectDetail = {
   yarns: Array<{ brand: string | null; yarnName: string | null; color: string | null; amount: string | null; unit: string | null; note: string | null }>;
   needles: Array<{ needleType: string | null; sizeMm: number | null; lengthCm: number | null; note: string | null }>;
   gauges: MaterialGauge[];
+  images: Array<{ url: string | null }>;
 };
 
 export type TrashItem = {
@@ -63,6 +64,7 @@ export type CreateProjectBody = {
   yarns?: Array<{ brand?: string; yarnName?: string; color?: string; amount?: string; unit?: string }>;
   needles?: Array<{ needleType?: string; sizeMm?: number; lengthCm?: number }>;
   gauges?: Array<{ stitches?: number; rows?: number; needleSizeMm?: number; measuredStage?: string }>;
+  imageFileIds?: number[];
 };
 
 export const STATUS_LABEL: Record<string, string> = {

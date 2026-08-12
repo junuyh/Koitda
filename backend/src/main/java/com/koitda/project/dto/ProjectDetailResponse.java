@@ -22,7 +22,11 @@ public record ProjectDetailResponse(
 		ExternalInfo external,
 		List<Yarn> yarns,
 		List<Needle> needles,
-		List<Gauge> gauges) {
+		List<Gauge> gauges,
+		List<Image> images) {
+
+	public record Image(String url) {
+	}
 
 	public record ExternalInfo(String title, String creatorName) {
 	}

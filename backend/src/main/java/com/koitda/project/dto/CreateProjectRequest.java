@@ -21,7 +21,8 @@ public record CreateProjectRequest(
 		ProjectVisibility visibility,
 		List<YarnInput> yarns,
 		List<NeedleInput> needles,
-		List<GaugeInput> gauges) {
+		List<GaugeInput> gauges,
+		List<Long> imageFileIds) {
 
 	public enum ConnectionType {
 		CATALOG,
@@ -53,5 +54,9 @@ public record CreateProjectRequest(
 
 	public List<GaugeInput> gaugesOrEmpty() {
 		return gauges == null ? List.of() : gauges;
+	}
+
+	public List<Long> imageFileIdsOrEmpty() {
+		return imageFileIds == null ? List.of() : imageFileIds;
 	}
 }

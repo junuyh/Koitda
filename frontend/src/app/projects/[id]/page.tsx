@@ -105,6 +105,18 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
+        {/* 대표 이미지 */}
+        {p.images && p.images.length > 0 && (
+          <Section title="대표 이미지">
+            <div className="flex flex-wrap gap-2">
+              {p.images.filter((im) => im.url).map((im, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={im.url as string} alt="" className="h-28 w-28 rounded-lg border border-neutral-200 object-cover dark:border-neutral-800" />
+              ))}
+            </div>
+          </Section>
+        )}
+
         {/* 원작 스냅샷 */}
         {(snap?.gauge || (snap?.sizes && snap.sizes.length > 0)) && (
           <Section title="원작 정보 (연결 시점 복사)">

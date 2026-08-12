@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { patternApi } from "@/features/pattern/api";
 import { projectApi, type CreateProjectBody } from "@/features/project/api";
+import { ImageUploader } from "@/features/file/ImageUploader";
 
 type YarnRow = { brand: string; yarnName: string; color: string; amount: string };
 type GaugeRow = { stitches: string; rows: string; needleSizeMm: string };
@@ -35,6 +36,7 @@ function NewProjectForm() {
 
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
+  const [imageIds, setImageIds] = useState<number[]>([]);
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
   const [yarns, setYarns] = useState<YarnRow[]>([{ brand: "", yarnName: "", color: "", amount: "" }]);
   const [gauges, setGauges] = useState<GaugeRow[]>([{ stitches: "", rows: "", needleSizeMm: "" }]);
@@ -71,6 +73,7 @@ function NewProjectForm() {
       connectionType: connection,
       title: title.trim() || undefined,
       note: comment.trim() || undefined,
+      imageFileIds: imageIds.length ? imageIds : undefined,
       visibility,
       yarns: yarns
         .filter((y) => y.brand || y.yarnName || y.color || y.amount)
@@ -173,7 +176,12 @@ function NewProjectForm() {
           ))}
         </Section>
 
-        {/* 5. 코멘트 + 공개 */}
+        {/* 5. 대표 이미지 */}
+        <Section title="대표 이미지">
+          <ImageUploader value={imageIds} onChange={setImageIds} usageType="PROJECT_IMAGE" max={7} />
+        </Section>
+
+        {/* 6. 코멘트 + 공개 */}
         <Section title="코멘트">
           <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="한 줄 코멘트 (선택)" className={inputClass} />
           <label className="mt-3 flex items-center gap-2 text-sm">
@@ -182,7 +190,6 @@ function NewProjectForm() {
           </label>
         </Section>
 
-        <p className="text-xs text-neutral-400">대표 이미지 등록은 파일 업로드 도입 후 추가됩니다.</p>
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
