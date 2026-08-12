@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authApi } from "@/features/auth/api";
 import { patternApi, type PatternListItem } from "@/features/pattern/api";
+import { accentOf } from "@/features/ui/accent";
 
 const PAGE_SIZE = 12;
 
@@ -32,8 +33,11 @@ export default function PatternListPage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">도안 둘러보기</h1>
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-400">Explore</p>
+          <h1 className="mt-1 text-4xl font-black tracking-tight">도안 둘러보기</h1>
+        </div>
         <Link href="/" className="text-sm text-neutral-500 hover:underline">홈</Link>
       </div>
 
@@ -51,9 +55,9 @@ export default function PatternListPage() {
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="도안명·원작자 검색"
             aria-label="도안 검색"
-            className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
+            className="w-full rounded-full border-2 border-neutral-900 bg-transparent px-4 py-2 text-sm outline-none dark:border-neutral-100"
           />
-          <button type="submit" className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+          <button type="submit" className="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-bold text-white dark:bg-neutral-100 dark:text-neutral-900">
             검색
           </button>
         </form>
@@ -107,11 +111,12 @@ export default function PatternListPage() {
 }
 
 const selectClass =
-  "rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100";
+  "rounded-full border-2 border-neutral-900 bg-transparent px-4 py-2 text-sm outline-none dark:border-neutral-100";
 
 function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const accent = accentOf(pattern.id);
 
   const wish = useMutation({
     mutationFn: () => (pattern.wished ? patternApi.removeWish(pattern.id) : patternApi.addWish(pattern.id)),
@@ -127,11 +132,11 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
   }
 
   return (
-    <li className="group relative flex flex-col overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+    <li className="group relative flex flex-col overflow-hidden rounded-2xl border-2 border-neutral-900 bg-white transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-950 dark:hover:shadow-[4px_4px_0_0_rgba(255,255,255,0.9)]">
       <Link href={`/patterns/${pattern.id}`} className="flex flex-col">
         {/* 대표 이미지 — 깨지면 글자 placeholder 로 폴백 */}
-        <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-neutral-100 text-neutral-400 dark:bg-neutral-900">
-          <span className="text-3xl font-semibold">{pattern.title.slice(0, 1)}</span>
+        <div className={`relative flex aspect-square items-center justify-center overflow-hidden border-b-2 border-neutral-900 bg-gradient-to-br text-4xl font-black text-neutral-900/20 dark:border-neutral-100 dark:text-neutral-100/20 ${accent.wash}`}>
+          <span>{pattern.title.slice(0, 1)}</span>
           {pattern.thumbnailUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={pattern.thumbnailUrl} alt={pattern.title}
@@ -139,23 +144,23 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
               className="absolute inset-0 h-full w-full object-cover" />
           )}
           {pattern.craftType && (
-            <span className="absolute left-2 top-2 rounded bg-white/80 px-1.5 py-0.5 text-[11px] font-medium text-neutral-700 dark:bg-black/60 dark:text-neutral-200">
+            <span className={`absolute left-2 top-2 rounded-full border border-neutral-900 px-2 py-0.5 text-[11px] font-bold dark:border-neutral-100 ${accent.solid}`}>
               {CRAFT_LABEL[pattern.craftType] ?? pattern.craftType}
             </span>
           )}
         </div>
 
         <div className="flex flex-1 flex-col gap-1 p-3">
-          <p className="line-clamp-1 text-sm font-medium">{pattern.title}</p>
+          <p className="line-clamp-1 text-sm font-bold">{pattern.title}</p>
           <p className="line-clamp-1 text-xs text-neutral-500">
             {pattern.designerName ?? pattern.sellerBrand ?? "원작자 미상"}
           </p>
-          <div className="mt-1 flex items-center justify-between">
-            <span className="text-sm font-semibold">
+          <div className="mt-1.5 flex items-center justify-between">
+            <span className="text-base font-black">
               {pattern.salePrice != null ? `${pattern.salePrice.toLocaleString()}원` : "-"}
             </span>
             {pattern.difficulty && (
-              <span className="text-[11px] text-neutral-500">{pattern.difficulty}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${accent.soft}`}>{pattern.difficulty}</span>
             )}
           </div>
         </div>
@@ -168,7 +173,7 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
         disabled={wish.isPending}
         aria-label={pattern.wished ? "위시 해제" : "위시 등록"}
         aria-pressed={pattern.wished}
-        className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-sm dark:bg-black/60"
+        className="absolute right-2 top-2 rounded-full border border-neutral-900 bg-white px-2 py-0.5 text-sm font-semibold dark:border-neutral-100 dark:bg-neutral-950"
       >
         {pattern.wished ? "♥" : "♡"} {pattern.wishCount}
       </button>
