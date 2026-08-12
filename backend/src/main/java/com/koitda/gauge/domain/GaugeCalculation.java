@@ -99,6 +99,18 @@ public class GaugeCalculation {
 		return result;
 	}
 
+	public String getMyGauge() {
+		return myGauge;
+	}
+
+	public String getPatternGauge() {
+		return patternGauge;
+	}
+
+	public String getSelectedSizeLabel() {
+		return selectedSizeLabel;
+	}
+
 	public Integer getAdjustedCastOnStitches() {
 		return adjustedCastOnStitches;
 	}

@@ -6,8 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { gaugeApi, type CalculateBody, type CalculationResult, type SizeInfo } from "@/features/gauge/api";
+import { GaugeResultView } from "@/features/gauge/GaugeResultView";
 
-const DIRECTION_LABEL: Record<string, string> = { LARGER: "더 굵은 바늘", SMALLER: "더 얇은 바늘", SAME: "동일" };
 const inputClass =
   "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100";
 
@@ -26,6 +26,7 @@ export default function GaugeCalcPage() {
   const [sizeLabel, setSizeLabel] = useState<string>("");
   const [myStitches, setMyStitches] = useState("");
   const [myRows, setMyRows] = useState("");
+  const [myNeedle, setMyNeedle] = useState(""); // 비우면 도안 바늘 mm 로 자동
   const [targets, setTargets] = useState<Record<string, string>>({});
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,10 +85,12 @@ export default function GaugeCalcPage() {
       const num = Number(v);
       if (Number.isFinite(num) && num !== selectedSize.measurements[k]) changed[k] = num;
     }
+    // 바늘 mm 미입력 시 도안 바늘과 동일하다고 본다(GAUGE-004).
+    const needle = myNeedle.trim() ? Number(myNeedle) : (defaults?.patternGauge?.needleSizeMm ?? null);
     calc.mutate({
       projectId,
       patternGauge: defaults?.patternGauge ?? undefined,
-      myGauge: { stitches: s, rows: r, needleSizeMm: null },
+      myGauge: { stitches: s, rows: r, needleSizeMm: needle },
       selectedSizeLabel: sizeLabel,
       targetMeasurements: changed,
     });
@@ -115,7 +118,7 @@ export default function GaugeCalcPage() {
                 {defaults.sizes.map((s) => <option key={s.label} value={s.label}>{s.label} (시작 {s.castOnStitches}코)</option>)}
               </select>
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <label className="block">
                 <span className="mb-1 block text-xs text-neutral-500">내 게이지 코수</span>
                 <input inputMode="decimal" value={myStitches} onChange={(e) => setMyStitches(e.target.value)} className={inputClass} />
@@ -123,6 +126,12 @@ export default function GaugeCalcPage() {
               <label className="block">
                 <span className="mb-1 block text-xs text-neutral-500">내 게이지 단수</span>
                 <input inputMode="decimal" value={myRows} onChange={(e) => setMyRows(e.target.value)} className={inputClass} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-neutral-500">내 바늘 mm</span>
+                <input inputMode="decimal" value={myNeedle} onChange={(e) => setMyNeedle(e.target.value)}
+                  placeholder={defaults.patternGauge?.needleSizeMm != null ? `도안 ${defaults.patternGauge.needleSizeMm}` : "선택"}
+                  className={inputClass} />
               </label>
             </div>
           </section>
@@ -164,65 +173,12 @@ export default function GaugeCalcPage() {
 function Result({ result, labels, onApply, applying }: {
   result: CalculationResult; labels: Record<string, string>; onApply: () => void; applying: boolean;
 }) {
-  const g = result.gaugeAdjustment;
   return (
     <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-      <h2 className="text-sm font-semibold">계산 결과</h2>
-
-      <div className="mt-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-        <p className="text-xs text-neutral-500">조정 시작 콧수</p>
-        <p className="mt-0.5 text-2xl font-semibold">{g.adjustedCastOnStitches}<span className="ml-1 text-base text-neutral-400">코</span></p>
-        <p className="mt-1 font-mono text-xs text-neutral-400">{g.formula}</p>
-      </div>
-
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
-              <th className="py-2 pr-3">부위</th>
-              <th className="py-2 pr-3">도안</th>
-              <th className="py-2 pr-3">목표</th>
-              <th className="py-2 pr-3">차이</th>
-              <th className="py-2 pr-3">필요 콧수/단수</th>
-              <th className="py-2 pr-3">계산식</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.sizeAdjustments.map((a) => (
-              <tr key={a.key} className={`border-b border-neutral-100 dark:border-neutral-900 ${a.differenceCm !== 0 ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
-                <td className="py-2 pr-3 font-medium">{labels[a.key] ?? a.label}</td>
-                <td className="py-2 pr-3">{a.patternValue}cm</td>
-                <td className="py-2 pr-3">{a.targetValue}cm</td>
-                <td className="py-2 pr-3">{a.differenceCm > 0 ? "+" : ""}{a.differenceCm}cm</td>
-                <td className="py-2 pr-3 font-medium">{a.requiredStitches}</td>
-                <td className="py-2 pr-3 font-mono text-xs text-neutral-400">{a.formula}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-3 text-sm">
-        <span className="rounded-md bg-neutral-100 px-3 py-1.5 dark:bg-neutral-800">
-          바늘 추천: {DIRECTION_LABEL[result.needleRecommendation.direction] ?? result.needleRecommendation.direction}
-          {result.needleRecommendation.suggestedMm != null && ` · ${result.needleRecommendation.suggestedMm}mm`}
-        </span>
-        {result.adjustmentSummary && (
-          <span className="rounded-md bg-amber-100 px-3 py-1.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-            조정 요약: {result.adjustmentSummary}
-          </span>
-        )}
-      </div>
-      <p className="mt-1 text-xs text-neutral-400">{result.needleRecommendation.note}</p>
-
-      {result.warnings.length > 0 && (
-        <ul className="mt-3 space-y-1">
-          {result.warnings.map((w, i) => <li key={i} className="text-xs text-neutral-500">⚠ {w}</li>)}
-        </ul>
-      )}
-
+      <h2 className="mb-3 text-sm font-semibold">계산 결과</h2>
+      <GaugeResultView result={result} labels={labels} />
       <button type="button" onClick={onApply} disabled={applying}
-        className="mt-6 w-full rounded-md border border-neutral-900 px-3 py-2.5 text-sm font-medium disabled:opacity-50 dark:border-neutral-100">
+        className="mt-6 w-full rounded-full border-2 border-neutral-900 px-3 py-2.5 text-sm font-bold disabled:opacity-50 dark:border-neutral-100">
         {applying ? "적용 중…" : "이 계산을 니팅로그에 적용"}
       </button>
     </section>

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { projectApi, STATUS_LABEL, type LogItem } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
+import { GaugeResultView } from "@/features/gauge/GaugeResultView";
 import { RichEditor } from "@/features/editor/RichEditor";
 import { RichContent } from "@/features/editor/RichContent";
 import { accentOf } from "@/features/ui/accent";
@@ -33,6 +34,12 @@ function statusPill(status: string | null): string {
 }
 
 const LOGS_PER_PAGE = 15;
+
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const MEASURE_LABEL: Record<string, string> = {
+  chestCm: "가슴둘레", lengthCm: "총장", sleeveLengthCm: "소매길이", shoulderCm: "어깨너비",
+  widthCm: "가로", heightCm: "세로",
+};
 
 // 오늘의 로그 본문(TipTap JSON)에서 이미지 src 를 재귀로 모은다. 사진 유무 배지·썸네일용.
 function extractImages(doc: unknown): string[] {
@@ -198,20 +205,38 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* 원작 스냅샷 */}
-        {(snap?.gauge || (snap?.sizes && snap.sizes.length > 0)) && (
+        {/* 원작 정보 — 연결 시점에 복사한 도안 원작 정보 전체 */}
+        {snap && (
           <Section title="원작 정보 (연결 시점 복사)">
-            {snap?.gauge && (
-              <Row label="게이지">{snap.gauge.stitches}코 × {snap.gauge.rows}단{snap.gauge.needleSizeMm ? ` · 바늘 ${snap.gauge.needleSizeMm}mm` : ""}</Row>
-            )}
-            {snap?.sizes && snap.sizes.length > 0 && (
+            <dl className="space-y-1.5 text-sm">
+              {snap.categoryName && <Row label="카테고리">{snap.categoryName}</Row>}
+              {snap.craftType && <Row label="구분">{CRAFT_LABEL[snap.craftType] ?? snap.craftType}</Row>}
+              {snap.difficulty && <Row label="난이도">{snap.difficulty}</Row>}
+              {snap.language && <Row label="언어">{snap.language}</Row>}
+              {snap.gauge && (snap.gauge.stitches != null || snap.gauge.rows != null) && (
+                <Row label="게이지">
+                  {snap.gauge.stitches}코 × {snap.gauge.rows}단
+                  {snap.gauge.swatchWidthCm ? ` (${snap.gauge.swatchWidthCm}×${snap.gauge.swatchHeightCm}cm)` : ""}
+                  {snap.gauge.needleSizeMm ? ` · 바늘 ${snap.gauge.needleSizeMm}mm` : ""}
+                </Row>
+              )}
+              {snap.yarnRequirement && <Row label="실 소요량">{snap.yarnRequirement}</Row>}
+              {snap.pageCount != null && <Row label="페이지 수">{snap.pageCount}p</Row>}
+              <Row label="참고 영상">
+                {snap.referenceVideoUrl
+                  ? <a href={snap.referenceVideoUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">영상 보기</a>
+                  : <span className="text-neutral-400">없음</span>}
+              </Row>
+            </dl>
+
+            {snap.sizes && snap.sizes.length > 0 && (
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[360px] text-sm">
                   <thead>
                     <tr className="border-b-2 border-neutral-900 text-left dark:border-neutral-100">
                       <th className="py-1.5 pr-4 font-bold">사이즈</th>
                       <th className="py-1.5 pr-4 font-bold">시작 콧수</th>
-                      {measureKeys.map((k) => <th key={k} className="py-1.5 pr-4 font-bold">{k}</th>)}
+                      {measureKeys.map((k) => <th key={k} className="py-1.5 pr-4 font-bold">{MEASURE_LABEL[k] ?? k}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -245,21 +270,33 @@ export default function ProjectDetailPage() {
           </Section>
         )}
 
-        {/* 게이지 계산 */}
+        {/* 게이지 — 적용한 내 게이지(굵게) + 계산 결과 전체 */}
         {p.patternType !== "EXTERNAL" && (
-          <Section title="게이지 계산">
+          <Section title="게이지">
             {appliedGauge ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm">
-                  <p>조정 시작 콧수 <span className="font-bold">{appliedGauge.adjustedCastOnStitches}코</span></p>
-                  {appliedGauge.adjustmentSummary && <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">조정: {appliedGauge.adjustmentSummary}</p>}
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm">
+                    적용한 게이지{" "}
+                    <span className="text-xl font-black">
+                      {appliedGauge.myGauge?.stitches}코 {appliedGauge.myGauge?.rows}단
+                    </span>
+                    {appliedGauge.myGauge?.needleSizeMm != null && (
+                      <span className="text-sm text-neutral-500"> · 바늘 {appliedGauge.myGauge.needleSizeMm}mm</span>
+                    )}
+                  </p>
+                  <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs font-bold underline">다시 계산</Link>
                 </div>
-                <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs font-medium underline">다시 계산</Link>
-              </div>
+                {appliedGauge.result && (
+                  <div className="mt-4">
+                    <GaugeResultView result={appliedGauge.result} labels={MEASURE_LABEL} />
+                  </div>
+                )}
+              </>
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm text-neutral-500">내 게이지 기준으로 조정 콧수·부위별 필요 콧수를 계산해 보세요.</p>
-                <Link href={`/projects/${id}/gauge`} className="shrink-0 rounded-full border-2 border-neutral-900 px-4 py-1.5 text-sm font-medium dark:border-neutral-100">게이지 계산</Link>
+                <Link href={`/projects/${id}/gauge`} className="shrink-0 rounded-full border-2 border-neutral-900 px-4 py-1.5 text-sm font-bold dark:border-neutral-100">게이지 계산</Link>
               </div>
             )}
           </Section>

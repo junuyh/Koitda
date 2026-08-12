@@ -122,7 +122,8 @@ public class GaugeService {
 		}
 		return calculationRepository.findByProjectIdAndAppliedTrue(projectId)
 				.map(c -> new AppliedCalculationSummary(c.getId(), c.getAdjustedCastOnStitches(),
-						c.getAdjustmentSummary(), c.isHasAdjustment()))
+						c.getAdjustmentSummary(), c.isHasAdjustment(), c.getSelectedSizeLabel(),
+						c.getMyGauge(), c.getPatternGauge(), c.getResult()))
 				.orElse(null);
 	}
 

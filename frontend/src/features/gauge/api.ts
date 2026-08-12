@@ -46,6 +46,10 @@ export type AppliedGaugeSummary = {
   adjustedCastOnStitches: number | null;
   adjustmentSummary: string | null;
   hasAdjustment: boolean;
+  selectedSizeLabel: string | null;
+  myGauge: GaugeInput | null;
+  patternGauge: GaugeInput | null;
+  result: CalculationResult | null;
 } | null;
 
 export type CalculateBody = {

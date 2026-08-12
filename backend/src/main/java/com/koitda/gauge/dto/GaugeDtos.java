@@ -68,11 +68,19 @@ public final class GaugeDtos {
 			List<String> warnings) {
 	}
 
-	/** 니팅로그 상세용 요약(GAUGE-013·015). 적용 계산이 없으면 null. */
+	/**
+	 * 니팅로그 상세용 적용 계산(GAUGE-013·015). 적용 계산이 없으면 null.
+	 * 게이지 영역에 '적용한 내 게이지'와 계산 결과 전체(바늘 추천·부위별·경고)를 함께 노출한다.
+	 * myGauge·patternGauge·result 는 저장된 JSONB 원문을 그대로 중첩 JSON 으로 내보낸다.
+	 */
 	public record AppliedCalculationSummary(
 			Long calculationId,
 			Integer adjustedCastOnStitches,
 			String adjustmentSummary,
-			boolean hasAdjustment) {
+			boolean hasAdjustment,
+			String selectedSizeLabel,
+			@com.fasterxml.jackson.annotation.JsonRawValue String myGauge,
+			@com.fasterxml.jackson.annotation.JsonRawValue String patternGauge,
+			@com.fasterxml.jackson.annotation.JsonRawValue String result) {
 	}
 }

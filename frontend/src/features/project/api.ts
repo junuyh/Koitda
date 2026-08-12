@@ -30,7 +30,15 @@ export type ProjectDetail = {
   patternSnapshot: {
     title?: string;
     designerName?: string;
-    gauge?: { stitches?: number; rows?: number; needleSizeMm?: number };
+    categoryName?: string;
+    craftType?: string;
+    difficulty?: string;
+    language?: string;
+    referenceVideoUrl?: string;
+    yarnRequirement?: string;
+    pageCount?: number;
+    gauge?: { stitches?: number; rows?: number; needleSizeMm?: number; swatchWidthCm?: number; swatchHeightCm?: number };
+    needles?: unknown;
     sizes?: Array<{ label: string; castOnStitches: number; measurements: Record<string, number> }>;
   } | null;
   external: { title: string; creatorName: string | null } | null;

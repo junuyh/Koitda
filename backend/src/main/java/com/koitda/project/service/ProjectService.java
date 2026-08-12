@@ -52,6 +52,7 @@ public class ProjectService {
 	private final ProjectImageRepository imageRepository;
 	private final ContentPostRepository contentPostRepository;
 	private final com.koitda.file.repository.FileAssetRepository fileAssetRepository;
+	private final com.koitda.pattern.repository.PatternCategoryRepository categoryRepository;
 	private final ObjectMapper objectMapper;
 
 	public ProjectService(KnittingProjectRepository projectRepository,
@@ -61,6 +62,7 @@ public class ProjectService {
 			ProjectGaugeRepository gaugeRepository, ProjectImageRepository imageRepository,
 			ContentPostRepository contentPostRepository,
 			com.koitda.file.repository.FileAssetRepository fileAssetRepository,
+			com.koitda.pattern.repository.PatternCategoryRepository categoryRepository,
 			ObjectMapper objectMapper) {
 		this.projectRepository = projectRepository;
 		this.externalRepository = externalRepository;
@@ -71,6 +73,7 @@ public class ProjectService {
 		this.imageRepository = imageRepository;
 		this.contentPostRepository = contentPostRepository;
 		this.fileAssetRepository = fileAssetRepository;
+		this.categoryRepository = categoryRepository;
 		this.objectMapper = objectMapper;
 	}
 
@@ -289,11 +292,36 @@ public class ProjectService {
 		return saved.getId();
 	}
 
-	/** 원작 정보 스냅샷(PROJECT-017) — 연결 시점의 도안 게이지·바늘·사이즈를 복사한다. */
+	/**
+	 * 원작 정보 스냅샷(PROJECT-017) — 연결 시점의 도안 원작 정보를 통째로 복사한다.
+	 * 이후 원작이 수정돼도 니팅로그에는 '그 시점의 기록'이 남는다(참조 아님, 복사).
+	 */
 	private String buildSnapshot(SellingPattern p) {
 		ObjectNode snap = objectMapper.createObjectNode();
 		snap.put("title", p.getTitle());
 		snap.put("designerName", p.getDesignerName());
+		if (p.getCategoryId() != null) {
+			categoryRepository.findById(p.getCategoryId())
+					.ifPresent(c -> snap.put("categoryName", c.getName()));
+		}
+		if (p.getCraftType() != null) {
+			snap.put("craftType", p.getCraftType().name());
+		}
+		if (p.getDifficulty() != null) {
+			snap.put("difficulty", p.getDifficulty());
+		}
+		if (p.getLanguage() != null) {
+			snap.put("language", p.getLanguage());
+		}
+		if (p.getReferenceVideoUrl() != null) {
+			snap.put("referenceVideoUrl", p.getReferenceVideoUrl());
+		}
+		if (p.getYarnRequirement() != null) {
+			snap.put("yarnRequirement", p.getYarnRequirement());
+		}
+		if (p.getPageCount() != null) {
+			snap.put("pageCount", p.getPageCount());
+		}
 		if (p.getGaugeInfo() != null) {
 			snap.set("gauge", objectMapper.readTree(p.getGaugeInfo()));
 		}
