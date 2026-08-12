@@ -28,8 +28,8 @@ const BANNERS = [
 
 export default function HomePage() {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: authApi.me });
-  const { data: best } = useQuery({ queryKey: ["patterns", "best"], queryFn: () => patternApi.bestSellers(12) });
-  const { data: latest } = useQuery({ queryKey: ["patterns", "latest"], queryFn: () => patternApi.latest(12) });
+  const { data: best } = useQuery({ queryKey: ["patterns", "best"], queryFn: () => patternApi.bestSellers(10) });
+  const { data: latest } = useQuery({ queryKey: ["patterns", "latest"], queryFn: () => patternApi.latest(10) });
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
@@ -143,7 +143,7 @@ function PatternMiniCard({ p, rank }: { p: PatternListItem; rank?: number }) {
 /* ── 공개 니팅로그 피드 ──────────────────────────────────── */
 function PublicFeed() {
   const [sort, setSort] = useState<"recent" | "likes">("recent");
-  const { data: feed } = useQuery({ queryKey: ["feed", sort, "home"], queryFn: () => projectApi.feed(sort, 0, 8) });
+  const { data: feed } = useQuery({ queryKey: ["feed", sort, "home"], queryFn: () => projectApi.feed(sort, 0, 10) });
 
   return (
     <section className="mt-10">

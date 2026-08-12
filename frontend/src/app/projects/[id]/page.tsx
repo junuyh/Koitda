@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { projectApi, STATUS_LABEL } from "@/features/project/api";
+import { projectApi, STATUS_LABEL, type LogItem } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { RichEditor } from "@/features/editor/RichEditor";
 import { RichContent } from "@/features/editor/RichContent";
@@ -15,6 +15,36 @@ const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
 
 // 레트로(2000년대) 박스 — 두꺼운 라운드 보더
 const box = "rounded-[22px] border-2 border-neutral-900 bg-white dark:border-neutral-100 dark:bg-neutral-950";
+
+// 상태별 pill 색 — 진행 단계를 색으로 읽히게(로그 리스트와 동일 규칙)
+const STATUS_TONE: Record<string, string> = {
+  PLANNED: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
+  CO: "bg-sky-400 text-sky-950",
+  WIP: "bg-amber-400 text-amber-950",
+  UFO: "bg-neutral-300 text-neutral-700 dark:bg-neutral-600 dark:text-neutral-100",
+  FO: "bg-emerald-400 text-emerald-950",
+};
+
+function statusPill(status: string | null): string {
+  return `rounded-full border border-neutral-900 px-2 py-0.5 text-[11px] font-bold dark:border-neutral-100 ${
+    status ? STATUS_TONE[status] ?? STATUS_TONE.PLANNED : STATUS_TONE.PLANNED
+  }`;
+}
+
+const LOGS_PER_PAGE = 15;
+
+// 오늘의 로그 본문(TipTap JSON)에서 이미지 src 를 재귀로 모은다. 사진 유무 배지·썸네일용.
+function extractImages(doc: unknown): string[] {
+  const out: string[] = [];
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    const n = node as { type?: string; attrs?: { src?: string }; content?: unknown[] };
+    if (n.type === "image" && n.attrs?.src) out.push(n.attrs.src);
+    if (Array.isArray(n.content)) n.content.forEach(walk);
+  };
+  walk(doc);
+  return out;
+}
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
@@ -29,6 +59,11 @@ export default function ProjectDetailPage() {
     queryFn: () => gaugeApi.applied(id),
     retry: false,
   });
+
+  // 오늘의 로그 팝업(모달)로 열린 로그. 리스트가 이미 본문을 담고 있어 추가 조회 없이 연다.
+  const [openLog, setOpenLog] = useState<LogItem | null>(null);
+  const [writeOpen, setWriteOpen] = useState(false); // 작성 폼 팝업
+  const [logPage, setLogPage] = useState(0); // 로그 리스트 페이지(15개씩)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["project", id] });
@@ -212,30 +247,156 @@ export default function ProjectDetailPage() {
           </Section>
         )}
 
-        {/* 오늘의 로그 */}
-        <Section title="오늘의 로그">
-          <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility} onDone={invalidate} />
-          <ul className="mt-4 divide-y-2 divide-dashed divide-neutral-200 dark:divide-neutral-800">
-            {(logs ?? []).map((l) => (
-              <li key={l.id} className="py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">{l.displayTitle}</span>
-                  <span className="text-xs text-neutral-500">{l.logDate} · {l.knittingStatus ? STATUS_LABEL[l.knittingStatus] : ""}</span>
-                </div>
-                {l.contentDocument ? (
-                  <div className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-                    <RichContent doc={l.contentDocument as JSONContent} />
+        {/* 오늘의 로그 — 게시물 리스트(15개씩). 작성은 팝업, 카드 클릭은 본문 팝업. */}
+        <section className={`${box} p-5`}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">오늘의 로그</h2>
+            <button type="button" onClick={() => setWriteOpen(true)}
+              className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-1.5 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
+              + 오늘의 로그
+            </button>
+          </div>
+
+          {(() => {
+            const all = logs ?? [];
+            const totalPages = Math.max(1, Math.ceil(all.length / LOGS_PER_PAGE));
+            const page = Math.min(logPage, totalPages - 1);
+            const slice = all.slice(page * LOGS_PER_PAGE, page * LOGS_PER_PAGE + LOGS_PER_PAGE);
+            if (all.length === 0) {
+              return <p className="py-3 text-sm text-neutral-400">아직 로그가 없습니다. 첫 기록을 남겨보세요.</p>;
+            }
+            return (
+              <>
+                <ul className="space-y-2">
+                  {slice.map((l) => {
+                    const images = extractImages(l.contentDocument);
+                    return (
+                      <li key={l.id}>
+                        <button type="button" onClick={() => setOpenLog(l)}
+                          className="w-full rounded-2xl border-2 border-neutral-900 p-3 text-left transition hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:hover:shadow-[3px_3px_0_0_rgba(255,255,255,0.9)]">
+                          <div className="flex justify-between gap-3">
+                            {/* 좌: 상태·제목·요약 */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={statusPill(l.knittingStatus)}>
+                                  {l.knittingStatus ? STATUS_LABEL[l.knittingStatus] ?? l.knittingStatus : "로그"}
+                                </span>
+                                <span className="line-clamp-1 text-sm font-bold">{l.displayTitle}</span>
+                              </div>
+                              {l.comment && <p className="mt-1.5 line-clamp-2 text-sm text-neutral-500">{l.comment}</p>}
+                            </div>
+                            {/* 우: 날짜 + 그 아래 대표 이미지 썸네일 */}
+                            <div className="flex shrink-0 flex-col items-end gap-1.5">
+                              <div className="flex items-center gap-2 text-xs text-neutral-400">
+                                {l.visibility === "PUBLIC" && <span className="font-bold text-neutral-500">공개</span>}
+                                <span>{l.logDate}</span>
+                              </div>
+                              {images.length > 0 && (
+                                <div className="relative">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={images[0]} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                    className="h-16 w-16 rounded-lg border border-neutral-300 object-cover dark:border-neutral-700" />
+                                  {images.length > 1 && (
+                                    <span className="absolute bottom-1 right-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">+{images.length - 1}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+                    <button type="button" onClick={() => setLogPage(page - 1)} disabled={page <= 0}
+                      className="rounded-full border-2 border-neutral-900 px-3 py-1 font-bold disabled:opacity-40 dark:border-neutral-100">이전</button>
+                    <span className="text-neutral-500">{page + 1} / {totalPages}</span>
+                    <button type="button" onClick={() => setLogPage(page + 1)} disabled={page >= totalPages - 1}
+                      className="rounded-full border-2 border-neutral-900 px-3 py-1 font-bold disabled:opacity-40 dark:border-neutral-100">다음</button>
                   </div>
-                ) : l.comment ? (
-                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{l.comment}</p>
-                ) : null}
-              </li>
-            ))}
-            {(logs ?? []).length === 0 && <li className="py-3 text-sm text-neutral-400">아직 로그가 없습니다.</li>}
-          </ul>
-        </Section>
+                )}
+              </>
+            );
+          })()}
+        </section>
       </div>
+
+      {openLog && <LogModal log={openLog} onClose={() => setOpenLog(null)} />}
+
+      {writeOpen && (
+        <Modal onClose={() => setWriteOpen(false)} maxWidth="max-w-2xl">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-black tracking-tight">오늘의 로그 작성</h3>
+            <button type="button" onClick={() => setWriteOpen(false)} aria-label="닫기"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
+              ✕
+            </button>
+          </div>
+          <div className="mt-4">
+            <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility}
+              onDone={() => { invalidate(); setWriteOpen(false); }} />
+          </div>
+        </Modal>
+      )}
     </main>
+  );
+}
+
+/** 모달 공통 셸 — 배경 딤·Esc·배경 스크롤 잠금. */
+function Modal({ onClose, children, maxWidth = "max-w-lg" }: { onClose: () => void; children: React.ReactNode; maxWidth?: string }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div className={`relative z-10 max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-3xl border-2 border-neutral-900 bg-white p-6 dark:border-neutral-100 dark:bg-neutral-950`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** 오늘의 로그 본문 팝업. 리스트에서 넘겨받은 데이터로 본문을 렌더한다. */
+function LogModal({ log, onClose }: { log: LogItem; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={statusPill(log.knittingStatus)}>
+              {log.knittingStatus ? STATUS_LABEL[log.knittingStatus] ?? log.knittingStatus : "로그"}
+            </span>
+            <span className="text-xs text-neutral-400">{log.logDate}</span>
+            <span className="text-xs font-bold text-neutral-500">{log.visibility === "PUBLIC" ? "공개" : "비공개"}</span>
+          </div>
+          <h3 className="mt-2 text-xl font-black tracking-tight">{log.displayTitle}</h3>
+        </div>
+        <button type="button" onClick={onClose} aria-label="닫기"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
+          ✕
+        </button>
+      </div>
+
+      <div className="mt-4">
+        {log.contentDocument ? (
+          <div className="text-sm text-neutral-800 dark:text-neutral-200">
+            <RichContent doc={log.contentDocument as JSONContent} />
+          </div>
+        ) : log.comment ? (
+          <p className="whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{log.comment}</p>
+        ) : (
+          <p className="text-sm text-neutral-400">내용이 없습니다.</p>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -270,8 +431,7 @@ function QuickLogForm({
   });
 
   return (
-    <form className="rounded-2xl border-2 border-dashed border-neutral-400 p-3 dark:border-neutral-600"
-      onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
+    <form onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
       <div className="mb-2 flex items-center gap-2">
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="상태"
           className="rounded-full border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm dark:border-neutral-100">
