@@ -1,5 +1,6 @@
 package com.koitda.post.dto;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.koitda.post.domain.ContentPost;
 import java.time.LocalDate;
 
@@ -10,11 +11,12 @@ public record LogResponse(
 		String knittingStatus,
 		LocalDate logDate,
 		String visibility,
-		String comment) {
+		String comment,
+		@JsonRawValue String contentDocument) {
 
 	public static LogResponse from(ContentPost p) {
 		return new LogResponse(p.getId(), p.getDisplayTitle(),
 				p.getKnittingStatus() != null ? p.getKnittingStatus().name() : null,
-				p.getLogDate(), p.getVisibility().name(), p.getContentText());
+				p.getLogDate(), p.getVisibility().name(), p.getContentText(), p.getContentDocument());
 	}
 }

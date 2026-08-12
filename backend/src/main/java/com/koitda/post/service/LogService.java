@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class LogService {
@@ -24,10 +25,13 @@ public class LogService {
 
 	private final ContentPostRepository postRepository;
 	private final KnittingProjectRepository projectRepository;
+	private final ObjectMapper objectMapper;
 
-	public LogService(ContentPostRepository postRepository, KnittingProjectRepository projectRepository) {
+	public LogService(ContentPostRepository postRepository, KnittingProjectRepository projectRepository,
+			ObjectMapper objectMapper) {
 		this.postRepository = postRepository;
 		this.projectRepository = projectRepository;
+		this.objectMapper = objectMapper;
 	}
 
 	@Transactional
@@ -56,8 +60,10 @@ public class LogService {
 			logVisibility = requested;
 		}
 
+		String contentDocumentJson = req.contentDocument() == null ? null
+				: objectMapper.writeValueAsString(req.contentDocument());
 		ContentPost post = ContentPost.forProjectLog(userId, projectId, req.knittingStatus(),
-				req.title(), displayTitle, null, logDate, req.comment(), logVisibility);
+				req.title(), displayTitle, null, logDate, req.comment(), contentDocumentJson, logVisibility);
 		postRepository.save(post);
 
 		// 상태 파생: 기록일 기준 최신 로그의 상태로 니팅로그 상태를 갱신(POST-007)

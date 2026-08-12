@@ -6,6 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { projectApi, STATUS_LABEL } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
+import { RichEditor } from "@/features/editor/RichEditor";
+import { RichContent } from "@/features/editor/RichContent";
+import type { JSONContent } from "@tiptap/react";
 
 const STATUS_ORDER = ["PLANNED", "CO", "WIP", "UFO", "FO"];
 
@@ -194,7 +197,13 @@ export default function ProjectDetailPage() {
                   <span className="text-sm font-bold">{l.displayTitle}</span>
                   <span className="text-xs text-neutral-500">{l.logDate} · {l.knittingStatus ? STATUS_LABEL[l.knittingStatus] : ""}</span>
                 </div>
-                {l.comment && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{l.comment}</p>}
+                {l.contentDocument ? (
+                  <div className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+                    <RichContent doc={l.contentDocument as JSONContent} />
+                  </div>
+                ) : l.comment ? (
+                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{l.comment}</p>
+                ) : null}
               </li>
             ))}
             {(logs ?? []).length === 0 && <li className="py-3 text-sm text-neutral-400">아직 로그가 없습니다.</li>}
@@ -209,14 +218,21 @@ function QuickLogForm({
   projectId, currentStatus, projectVisibility, onDone,
 }: { projectId: number; currentStatus: string; projectVisibility: string; onDone: () => void }) {
   const [status, setStatus] = useState("CO");
-  const [comment, setComment] = useState("");
+  const [docJson, setDocJson] = useState<JSONContent | null>(null);
+  const [docText, setDocText] = useState("");
   const [makePublic, setMakePublic] = useState(false);
+  const [editorKey, setEditorKey] = useState(0); // 제출 후 에디터 초기화용
 
   useEffect(() => { setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus); }, [currentStatus]);
 
   const submit = useMutation({
     mutationFn: () => {
-      const body: Parameters<typeof projectApi.createLog>[1] = { knittingStatus: status, comment: comment.trim() || undefined };
+      const hasBody = docText.trim().length > 0;
+      const body: Parameters<typeof projectApi.createLog>[1] = {
+        knittingStatus: status,
+        comment: docText.trim() || undefined,
+        contentDocument: hasBody ? (docJson ?? undefined) : undefined,
+      };
       if (makePublic) {
         body.visibility = "PUBLIC";
         if (projectVisibility === "PRIVATE") {
@@ -225,26 +241,26 @@ function QuickLogForm({
       }
       return projectApi.createLog(projectId, body);
     },
-    onSuccess: () => { setComment(""); setMakePublic(false); onDone(); },
+    onSuccess: () => { setDocJson(null); setDocText(""); setMakePublic(false); setEditorKey((k) => k + 1); onDone(); },
   });
 
   return (
     <form className="rounded-2xl border-2 border-dashed border-neutral-400 p-3 dark:border-neutral-600"
       onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="mb-2 flex items-center gap-2">
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="상태"
           className="rounded-full border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm dark:border-neutral-100">
           {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
-        <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="오늘의 기록 한 줄"
-          className="flex-1 rounded-full border-2 border-neutral-900 bg-transparent px-4 py-2 text-sm dark:border-neutral-100" />
-        <button type="submit" disabled={submit.isPending}
-          className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">기록</button>
+        <label className="flex items-center gap-2 text-xs text-neutral-500">
+          <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
+          이 로그 공개
+        </label>
       </div>
-      <label className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
-        <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
-        이 로그 공개
-      </label>
+      <RichEditor key={editorKey} usageType="PROJECT_IMAGE" placeholder="오늘의 기록 — 줄글·사진·표"
+        onChange={(v) => { setDocJson(v.json); setDocText(v.text); }} />
+      <button type="submit" disabled={submit.isPending || !docText.trim()}
+        className="mt-2 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">기록</button>
     </form>
   );
 }

@@ -52,6 +52,7 @@ export type LogItem = {
   logDate: string;
   visibility: string;
   comment: string | null;
+  contentDocument: unknown;
 };
 
 export type CreateProjectBody = {
@@ -86,6 +87,7 @@ export const projectApi = {
     body: {
       knittingStatus: string;
       comment?: string;
+      contentDocument?: unknown;
       logDate?: string;
       title?: string;
       visibility?: "PRIVATE" | "PUBLIC";

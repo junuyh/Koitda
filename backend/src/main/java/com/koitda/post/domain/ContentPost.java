@@ -53,6 +53,10 @@ public class ContentPost {
 	@Column(name = "content_text")
 	private String contentText;
 
+	@org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+	@Column(name = "content_document")
+	private String contentDocument;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "visibility", nullable = false)
 	private ProjectVisibility visibility = ProjectVisibility.PRIVATE;
@@ -75,7 +79,7 @@ public class ContentPost {
 	/** 오늘의 로그 생성. */
 	public static ContentPost forProjectLog(Long userId, Long projectId, ProjectStatus knittingStatus,
 			String title, String displayTitle, Integer titleSequence, LocalDate logDate,
-			String contentText, ProjectVisibility visibility) {
+			String contentText, String contentDocument, ProjectVisibility visibility) {
 		ContentPost post = new ContentPost();
 		post.postType = PostType.PROJECT_LOG;
 		post.userId = userId;
@@ -86,6 +90,7 @@ public class ContentPost {
 		post.titleSequence = titleSequence;
 		post.logDate = logDate;
 		post.contentText = contentText;
+		post.contentDocument = contentDocument;
 		post.visibility = visibility;
 		return post;
 	}
@@ -120,6 +125,10 @@ public class ContentPost {
 
 	public String getContentText() {
 		return contentText;
+	}
+
+	public String getContentDocument() {
+		return contentDocument;
 	}
 
 	public ProjectVisibility getVisibility() {

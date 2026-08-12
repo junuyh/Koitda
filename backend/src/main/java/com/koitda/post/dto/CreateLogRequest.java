@@ -4,6 +4,7 @@ import com.koitda.project.domain.ProjectStatus;
 import com.koitda.project.domain.ProjectVisibility;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import tools.jackson.databind.JsonNode;
 
 /**
  * 오늘의 로그 작성(POST-001·003·010·011).
@@ -15,6 +16,7 @@ public record CreateLogRequest(
 		String title,
 		LocalDate logDate,
 		String comment,
+		JsonNode contentDocument,
 		ProjectVisibility visibility,
 		boolean publishProjectConfirmed) {
 }
