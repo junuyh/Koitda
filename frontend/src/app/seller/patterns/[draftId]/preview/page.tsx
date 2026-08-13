@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { sellerPatternApi } from "@/features/seller/api";
 
-const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" , MIXED: "혼합" };
 const MEASURE_LABEL: Record<string, string> = {
   chestCm: "가슴둘레",
   lengthCm: "총장",

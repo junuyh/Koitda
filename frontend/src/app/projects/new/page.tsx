@@ -233,7 +233,7 @@ function Section({ title, onAdd, children }: { title: string; onAdd?: () => void
   );
 }
 
-const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" , MIXED: "혼합" };
 const MEASURE_LABEL: Record<string, string> = {
   chestCm: "가슴둘레", lengthCm: "총장", sleeveLengthCm: "소매길이", shoulderCm: "어깨너비",
   widthCm: "가로", heightCm: "세로",

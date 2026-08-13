@@ -27,9 +27,11 @@ const MEASURE_COLS: Array<{ key: string; label: string }> = [
 
 type SizeRowState = { label: string; castOnStitches: string } & Record<string, string>;
 type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string; text: string };
+type NeedleRow = { type: "KNIT" | "CROCHET"; sizeMm: string };
 
 const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "", text: "" };
 const emptySize = (): SizeRowState => ({ label: "", castOnStitches: "" });
+const emptyNeedle = (): NeedleRow => ({ type: "KNIT", sizeMm: "" });
 
 export const inputClass =
   "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100";
@@ -40,7 +42,7 @@ function fromPreview(p: SellerPatternPreview): FormState {
     title: p.title ?? "",
     designerName: p.designerName ?? "",
     categoryId: p.categoryId != null ? String(p.categoryId) : "",
-    craftType: (p.craftType as "KNIT" | "CROCHET") ?? "KNIT",
+    craftType: (p.craftType as FormState["craftType"]) ?? "KNIT",
     difficulty: p.difficulty ?? "",
     language: p.language ?? "ko",
     regularPrice: p.regularPrice != null ? String(p.regularPrice) : "",
@@ -62,6 +64,16 @@ function fromPreview(p: SellerPatternPreview): FormState {
           text: (p.gaugeInfo as { text?: string }).text ?? "",
         }
       : { ...emptyGauge },
+    needles: (() => {
+      const raw = (p as { needleInfo?: unknown }).needleInfo;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((n) => {
+          const nn = n as { type?: string; sizeMm?: number };
+          return { type: (nn.type === "CROCHET" ? "CROCHET" : "KNIT") as "KNIT" | "CROCHET", sizeMm: numStr(nn.sizeMm) };
+        });
+      }
+      return [emptyNeedle()];
+    })(),
     sizes:
       p.sizeInfo?.sizes?.map((s) => {
         const row: SizeRowState = { label: s.label ?? "", castOnStitches: numStr(s.castOnStitches) };
@@ -79,7 +91,7 @@ type FormState = {
   title: string;
   designerName: string;
   categoryId: string;
-  craftType: "KNIT" | "CROCHET";
+  craftType: "KNIT" | "CROCHET" | "MIXED";
   difficulty: string;
   language: string;
   regularPrice: string;
@@ -92,6 +104,7 @@ type FormState = {
   yarnRequirement: string;
   description: string;
   gauge: GaugeState;
+  needles: NeedleRow[];
   sizes: SizeRowState[];
 };
 
@@ -112,6 +125,7 @@ const blankForm: FormState = {
   yarnRequirement: "",
   description: "",
   gauge: { ...emptyGauge },
+  needles: [emptyNeedle()],
   sizes: [emptySize()],
 };
 
@@ -164,33 +178,49 @@ export function PatternForm({
   function setSize(i: number, key: string, value: string) {
     setForm((f) => ({ ...f, sizes: f.sizes.map((r, idx) => (idx === i ? { ...r, [key]: value } : r)) }));
   }
+  function setNeedle(i: number, patch: Partial<NeedleRow>) {
+    setForm((f) => ({ ...f, needles: f.needles.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) }));
+  }
 
   function build(): SavePatternDraftBody | null {
     setError(null);
 
-    // 게이지: 숫자 5개는 모두 채우거나 모두 비우거나. 코바늘 등은 숫자 없이 자유 텍스트만 가능(계산 비활성).
+    // 사용 바늘(여러 개). mm 가 있는 행만 채택.
+    const needles = form.needles
+      .filter((n) => n.sizeMm.trim() !== "")
+      .map((n) => ({ type: n.type, sizeMm: Number(n.sizeMm) }));
+    if (needles.some((n) => !Number.isFinite(n.sizeMm) || n.sizeMm <= 0)) {
+      setError("바늘 mm 는 0보다 큰 숫자여야 합니다.");
+      return null;
+    }
+
+    // 게이지: 코·단·기준크기(4개)는 모두 채우거나 모두 비우거나. 코바늘 등은 비우고 자유 서술만.
     const g = form.gauge;
-    const gaugeVals = [g.stitches, g.rows, g.swatchWidthCm, g.swatchHeightCm, g.needleSizeMm];
-    const gaugeFilled = gaugeVals.filter((v) => v.trim() !== "").length;
+    const numVals = [g.stitches, g.rows, g.swatchWidthCm, g.swatchHeightCm];
+    const gaugeFilled = numVals.filter((v) => v.trim() !== "").length;
     let gauge: SavePatternDraftBody["gauge"];
-    if (gaugeFilled > 0 && gaugeFilled < 5) {
-      setError("게이지 숫자는 코수·단수·기준 너비·기준 높이·바늘 호수를 모두 입력하거나 모두 비워 주세요. (코바늘은 비우고 자유 서술만)");
+    if (gaugeFilled > 0 && gaugeFilled < 4) {
+      setError("게이지 숫자는 코수·단수·기준 너비·기준 높이를 모두 입력하거나 모두 비워 주세요. (코바늘은 비우고 자유 서술)");
       return null;
     }
     const gaugeText = g.text.trim();
-    if (gaugeFilled === 5) {
+    if (gaugeFilled === 4) {
+      if (needles.length === 0) {
+        setError("게이지 계산을 위해 사용 바늘을 1개 이상 입력하세요.");
+        return null;
+      }
       const nums = {
         stitches: Number(g.stitches),
         rows: Number(g.rows),
         swatchWidthCm: Number(g.swatchWidthCm),
         swatchHeightCm: Number(g.swatchHeightCm),
-        needleSizeMm: Number(g.needleSizeMm),
       };
       if (Object.values(nums).some((n) => !Number.isFinite(n) || n <= 0)) {
         setError("게이지 값은 모두 0보다 큰 숫자여야 합니다.");
         return null;
       }
-      gauge = { ...nums, text: gaugeText || undefined };
+      // 게이지 계산 기준 바늘 = 첫 번째 바늘 mm
+      gauge = { ...nums, needleSizeMm: needles[0].sizeMm, text: gaugeText || undefined };
     } else if (gaugeText) {
       gauge = { text: gaugeText }; // 자유 텍스트만
     }
@@ -232,8 +262,8 @@ export function PatternForm({
       language: form.language.trim() || undefined,
       regularPrice: form.regularPrice ? Number(form.regularPrice) : undefined,
       salePrice: form.salePrice ? Number(form.salePrice) : undefined,
-      productForm: form.productForm.trim() || undefined,
-      deliveryMethod: form.deliveryMethod.trim() || undefined,
+      productForm: "PDF", // 상품 형식·다운로드 방식은 현재 PDF 다운로드 고정(폼에서 제거)
+      deliveryMethod: "DOWNLOAD",
       availabilityDays: form.availabilityDays ? Number(form.availabilityDays) : undefined,
       referenceVideoUrl: form.referenceVideoUrl.trim() || undefined,
       pageCount: form.pageCount ? Number(form.pageCount) : undefined,
@@ -241,6 +271,7 @@ export function PatternForm({
       description: form.description.trim() || undefined,
       descriptionDocument: descDoc ?? undefined,
       gauge,
+      needle: needles.length ? needles : undefined,
       sizes: sizes.length ? sizes : undefined,
       imageFileIds: imageIds.length ? imageIds : undefined,
       thumbnailFileId: imageIds[0],
@@ -273,9 +304,10 @@ export function PatternForm({
             </select>
           </Labeled>
           <Labeled label="뜨개 방식">
-            <select value={form.craftType} onChange={(e) => set("craftType", e.target.value as "KNIT" | "CROCHET")} className={inputClass}>
+            <select value={form.craftType} onChange={(e) => set("craftType", e.target.value as FormState["craftType"])} className={inputClass}>
               <option value="KNIT">대바늘</option>
               <option value="CROCHET">코바늘</option>
+              <option value="MIXED">혼합</option>
             </select>
           </Labeled>
           <Labeled label="난이도">
@@ -294,12 +326,6 @@ export function PatternForm({
           </Labeled>
           <Labeled label="판매가 (원)">
             <input inputMode="numeric" value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} className={inputClass} />
-          </Labeled>
-          <Labeled label="상품 형태">
-            <input value={form.productForm} onChange={(e) => set("productForm", e.target.value)} placeholder="PDF" className={inputClass} />
-          </Labeled>
-          <Labeled label="다운로드 방식">
-            <input value={form.deliveryMethod} onChange={(e) => set("deliveryMethod", e.target.value)} placeholder="DOWNLOAD" className={inputClass} />
           </Labeled>
           <Labeled label="제공 기간 (일, 기본 1년)">
             <input inputMode="numeric" value={form.availabilityDays} onChange={(e) => set("availabilityDays", e.target.value)} placeholder="365" className={inputClass} />
@@ -327,10 +353,21 @@ export function PatternForm({
         </label>
       </Section>
 
-      <Section title="사용 바늘">
-        <p className="mb-2 text-xs text-neutral-500">게이지와 별도로 입력합니다. 게이지 계산의 바늘 추천 기준이 됩니다.</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <GaugeInput label="바늘(mm)" value={form.gauge.needleSizeMm} onChange={(v) => setGauge("needleSizeMm", v)} />
+      <Section title="사용 바늘" onAdd={() => set("needles", [...form.needles, emptyNeedle()])}>
+        <p className="mb-2 text-xs text-neutral-500">게이지와 별도로 입력합니다. 여러 개 등록 가능하며, 첫 번째 바늘이 게이지 계산 기준이 됩니다.</p>
+        <div className="space-y-2">
+          {form.needles.map((n, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <select value={n.type} onChange={(e) => setNeedle(i, { type: e.target.value as NeedleRow["type"] })} className={`${inputClass} max-w-32`}>
+                <option value="KNIT">대바늘</option>
+                <option value="CROCHET">코바늘</option>
+              </select>
+              <input placeholder="mm (예: 4.5)" inputMode="decimal" value={n.sizeMm} onChange={(e) => setNeedle(i, { sizeMm: e.target.value })} className={inputClass} />
+              {form.needles.length > 1 && (
+                <button type="button" onClick={() => set("needles", form.needles.filter((_, idx) => idx !== i))} className="shrink-0 text-xs text-red-500 hover:underline">삭제</button>
+              )}
+            </div>
+          ))}
         </div>
       </Section>
 
@@ -339,19 +376,21 @@ export function PatternForm({
         <div className="space-y-3">
           {form.sizes.map((row, i) => (
             <div key={i} className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+              {/* 앞: 필수/주요 데이터 — 사이즈명 · 가슴둘레 · 총장 · 소매길이 */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-3">
                   <input placeholder="사이즈명 (예: M)" value={row.label} onChange={(e) => setSize(i, "label", e.target.value)} className={inputClass} />
                 </div>
-                <input placeholder="시작 콧수 (선택)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={inputClass} />
                 {MEASURE_COLS.slice(0, 3).map((c) => (
                   <input key={c.key} placeholder={c.label} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={inputClass} />
                 ))}
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <input placeholder={MEASURE_COLS[3].label} inputMode="decimal" value={row[MEASURE_COLS[3].key] ?? ""} onChange={(e) => setSize(i, MEASURE_COLS[3].key, e.target.value)} className={`${inputClass} max-w-40`} />
+              {/* 뒤: 부가 데이터 — 어깨너비 · 시작 콧수(게이지 계산용, 구매 전 미노출) */}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input placeholder={`${MEASURE_COLS[3].label} (선택)`} inputMode="decimal" value={row[MEASURE_COLS[3].key] ?? ""} onChange={(e) => setSize(i, MEASURE_COLS[3].key, e.target.value)} className={`${inputClass} max-w-40`} />
+                <input placeholder="시작 콧수 (선택·게이지 계산용)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={`${inputClass} max-w-56`} />
                 {form.sizes.length > 1 && (
-                  <button type="button" onClick={() => set("sizes", form.sizes.filter((_, idx) => idx !== i))} className="text-xs text-red-500 hover:underline">행 삭제</button>
+                  <button type="button" onClick={() => set("sizes", form.sizes.filter((_, idx) => idx !== i))} className="ml-auto text-xs text-red-500 hover:underline">행 삭제</button>
                 )}
               </div>
             </div>

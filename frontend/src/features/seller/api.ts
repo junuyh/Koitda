@@ -36,7 +36,7 @@ export type SavePatternDraftBody = {
   title?: string;
   designerName?: string;
   categoryId?: number;
-  craftType?: "KNIT" | "CROCHET";
+  craftType?: "KNIT" | "CROCHET" | "MIXED";
   difficulty?: string;
   language?: string;
   regularPrice?: number;
@@ -50,6 +50,7 @@ export type SavePatternDraftBody = {
   description?: string;
   descriptionDocument?: unknown;
   gauge?: GaugeBody;
+  needle?: Array<{ type: "KNIT" | "CROCHET"; sizeMm: number }>;
   sizes?: SizeRow[];
   imageFileIds?: number[];
   thumbnailFileId?: number;

@@ -12,7 +12,7 @@ import { accentOf } from "@/features/ui/accent";
 import type { JSONContent } from "@tiptap/react";
 import { ApiError } from "@/lib/api";
 
-const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" , MIXED: "혼합" };
 
 /** YouTube URL → 임베드 URL. 유튜브가 아니면 null(링크로 폴백). */
 function youtubeEmbed(url: string): string | null {

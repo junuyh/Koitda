@@ -10,7 +10,7 @@ import { accentOf } from "@/features/ui/accent";
 
 const PAGE_SIZE = 12;
 
-const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" , MIXED: "혼합" };
 
 export default function PatternListPage() {
   const [keyword, setKeyword] = useState(""); // 입력 중 값

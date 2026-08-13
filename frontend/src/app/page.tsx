@@ -8,7 +8,7 @@ import { patternApi, type PatternListItem } from "@/features/pattern/api";
 import { projectApi, type FeedItem, STATUS_LABEL } from "@/features/project/api";
 import { accentOf } from "@/features/ui/accent";
 
-const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" , MIXED: "혼합" };
 
 const STATUS_TONE: Record<string, string> = {
   PLANNED: "bg-neutral-200 text-neutral-700",
