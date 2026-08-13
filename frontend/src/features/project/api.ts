@@ -112,6 +112,14 @@ export const projectApi = {
   ) => apiFetch<LogItem>(`/projects/${projectId}/posts/${postId}`, { method: "PATCH", body }),
   deleteLog: (projectId: number, postId: number) =>
     apiFetch<null>(`/projects/${projectId}/posts/${postId}`, { method: "DELETE" }),
+  updateMaterials: (
+    projectId: number,
+    body: {
+      yarns: Array<{ brand?: string; yarnName?: string; color?: string; amount?: string; unit?: string }>;
+      needles: Array<{ needleType?: string; sizeMm?: number; lengthCm?: number }>;
+      gauges: Array<{ stitches?: number; rows?: number; needleSizeMm?: number; measuredStage?: string }>;
+    },
+  ) => apiFetch<ProjectDetail>(`/projects/${projectId}/materials`, { method: "PATCH", body }),
   addImage: (projectId: number, fileId: number) =>
     apiFetch<ProjectDetail>(`/projects/${projectId}/images`, { method: "POST", body: { fileId } }),
   removeImage: (projectId: number, fileId: number) =>

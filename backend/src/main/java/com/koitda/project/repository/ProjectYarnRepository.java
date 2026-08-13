@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 public interface ProjectYarnRepository extends JpaRepository<ProjectYarn, Long> {
 	List<ProjectYarn> findByProjectIdOrderBySortOrderAscIdAsc(Long projectId);
 
+	void deleteByProjectId(Long projectId);
+
 	/** 도안에 연결된 니팅로그들이 자주 쓴 실 집계(브랜드+실이름). */
 	@Query("""
 			select y.brand as brand, y.yarnName as yarnName, count(y) as cnt

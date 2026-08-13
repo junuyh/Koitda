@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fileApi } from "@/features/file/api";
-import { projectApi, STATUS_LABEL, type LogItem } from "@/features/project/api";
+import { projectApi, STATUS_LABEL, type LogItem, type ProjectDetail } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { GaugeResultView } from "@/features/gauge/GaugeResultView";
 import { RichEditor } from "@/features/editor/RichEditor";
@@ -103,6 +103,7 @@ export default function ProjectDetailPage() {
   const [writeOpen, setWriteOpen] = useState(false); // 작성 폼 팝업
   const [editTarget, setEditTarget] = useState<LogItem | null>(null); // 수정 폼 팝업
   const [photoOpen, setPhotoOpen] = useState(false); // 대표 이미지 관리 팝업
+  const [materialsOpen, setMaterialsOpen] = useState(false); // 재료(실·바늘·게이지) 편집 팝업
   const [logPage, setLogPage] = useState(0); // 로그 리스트 페이지(15개씩)
 
   const invalidate = () => {
@@ -268,6 +269,10 @@ export default function ProjectDetailPage() {
 
         {/* 내 니팅 정보 — 내가 입력한 실·바늘·게이지 한 블록 */}
         <Section title="내 니팅 정보">
+          <div className="mb-2 flex justify-end">
+            <button type="button" onClick={() => setMaterialsOpen(true)}
+              className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100">실·바늘 편집</button>
+          </div>
           <dl className="space-y-3 text-sm">
             <div>
               <dt className="mb-1 text-xs font-bold text-neutral-400">🧶 실</dt>
@@ -463,7 +468,109 @@ export default function ProjectDetailPage() {
       {photoOpen && (
         <PhotoModal projectId={id} images={p.images} onClose={() => setPhotoOpen(false)} onChanged={invalidate} />
       )}
+
+      {materialsOpen && (
+        <MaterialsModal projectId={id} yarns={p.yarns} needles={p.needles} gauges={p.gauges}
+          onClose={() => setMaterialsOpen(false)} onSaved={() => { invalidate(); setMaterialsOpen(false); }} />
+      )}
     </main>
+  );
+}
+
+/** 실·바늘·게이지 편집(추가/삭제). 저장 시 재료 전체를 교체한다. */
+function MaterialsModal({ projectId, yarns, needles, gauges, onClose, onSaved }: {
+  projectId: number;
+  yarns: ProjectDetail["yarns"];
+  needles: ProjectDetail["needles"];
+  gauges: ProjectDetail["gauges"];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [yarnRows, setYarnRows] = useState(() =>
+    yarns.length ? yarns.map((y) => ({ brand: y.brand ?? "", yarnName: y.yarnName ?? "", amount: y.amount ?? "" })) : [{ brand: "", yarnName: "", amount: "" }]);
+  const [needleRows, setNeedleRows] = useState(() =>
+    needles.length ? needles.map((n) => ({ needleType: (n.needleType as string) ?? "KNIT", sizeMm: n.sizeMm != null ? String(n.sizeMm) : "" })) : [{ needleType: "KNIT", sizeMm: "" }]);
+  const [gaugeRows, setGaugeRows] = useState(() =>
+    gauges.length ? gauges.map((g) => ({ stitches: g.stitches != null ? String(g.stitches) : "", rows: g.rows != null ? String(g.rows) : "", needleSizeMm: g.needleSizeMm != null ? String(g.needleSizeMm) : "" })) : [{ stitches: "", rows: "", needleSizeMm: "" }]);
+
+  const save = useMutation({
+    mutationFn: () => projectApi.updateMaterials(projectId, {
+      yarns: yarnRows.filter((y) => y.brand || y.yarnName || y.amount)
+        .map((y) => ({ brand: y.brand || undefined, yarnName: y.yarnName || undefined, amount: y.amount || undefined })),
+      needles: needleRows.filter((n) => n.sizeMm.trim())
+        .map((n) => ({ needleType: n.needleType, sizeMm: Number(n.sizeMm) })),
+      gauges: gaugeRows.filter((g) => g.stitches.trim() && g.rows.trim())
+        .map((g) => ({ stitches: Number(g.stitches), rows: Number(g.rows), needleSizeMm: g.needleSizeMm ? Number(g.needleSizeMm) : undefined, measuredStage: "SWATCH" })),
+    }),
+    onSuccess: onSaved,
+  });
+
+  const inp = "w-full rounded-lg border-2 border-neutral-900 bg-transparent px-2.5 py-1.5 text-sm outline-none dark:border-neutral-100";
+  return (
+    <Modal onClose={onClose}>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-black tracking-tight">실·바늘·게이지 편집</h3>
+        <button type="button" onClick={onClose} aria-label="닫기"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">✕</button>
+      </div>
+
+      <div className="mt-4 space-y-5">
+        {/* 실 */}
+        <MatGroup title="🧶 실" onAdd={() => setYarnRows((r) => [...r, { brand: "", yarnName: "", amount: "" }])}>
+          {yarnRows.map((y, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input placeholder="브랜드" value={y.brand} onChange={(e) => setYarnRows((r) => r.map((v, idx) => idx === i ? { ...v, brand: e.target.value } : v))} className={inp} />
+              <input placeholder="실 이름" value={y.yarnName} onChange={(e) => setYarnRows((r) => r.map((v, idx) => idx === i ? { ...v, yarnName: e.target.value } : v))} className={inp} />
+              <input placeholder="양(예: 200g)" value={y.amount} onChange={(e) => setYarnRows((r) => r.map((v, idx) => idx === i ? { ...v, amount: e.target.value } : v))} className={inp} />
+              {yarnRows.length > 1 && <button type="button" onClick={() => setYarnRows((r) => r.filter((_, idx) => idx !== i))} className="shrink-0 text-xs text-red-500">✕</button>}
+            </div>
+          ))}
+        </MatGroup>
+
+        {/* 바늘 */}
+        <MatGroup title="🪡 바늘" onAdd={() => setNeedleRows((r) => [...r, { needleType: "KNIT", sizeMm: "" }])}>
+          {needleRows.map((n, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <select value={n.needleType} onChange={(e) => setNeedleRows((r) => r.map((v, idx) => idx === i ? { ...v, needleType: e.target.value } : v))} className={`${inp} max-w-28`}>
+                <option value="KNIT">대바늘</option>
+                <option value="CROCHET">코바늘</option>
+              </select>
+              <input placeholder="mm (예: 4.5)" inputMode="decimal" value={n.sizeMm} onChange={(e) => setNeedleRows((r) => r.map((v, idx) => idx === i ? { ...v, sizeMm: e.target.value } : v))} className={inp} />
+              {needleRows.length > 1 && <button type="button" onClick={() => setNeedleRows((r) => r.filter((_, idx) => idx !== i))} className="shrink-0 text-xs text-red-500">✕</button>}
+            </div>
+          ))}
+        </MatGroup>
+
+        {/* 게이지 */}
+        <MatGroup title="📏 게이지" onAdd={() => setGaugeRows((r) => [...r, { stitches: "", rows: "", needleSizeMm: "" }])}>
+          {gaugeRows.map((g, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input placeholder="코수" inputMode="decimal" value={g.stitches} onChange={(e) => setGaugeRows((r) => r.map((v, idx) => idx === i ? { ...v, stitches: e.target.value } : v))} className={inp} />
+              <input placeholder="단수" inputMode="decimal" value={g.rows} onChange={(e) => setGaugeRows((r) => r.map((v, idx) => idx === i ? { ...v, rows: e.target.value } : v))} className={inp} />
+              <input placeholder="바늘mm" inputMode="decimal" value={g.needleSizeMm} onChange={(e) => setGaugeRows((r) => r.map((v, idx) => idx === i ? { ...v, needleSizeMm: e.target.value } : v))} className={inp} />
+              {gaugeRows.length > 1 && <button type="button" onClick={() => setGaugeRows((r) => r.filter((_, idx) => idx !== i))} className="shrink-0 text-xs text-red-500">✕</button>}
+            </div>
+          ))}
+        </MatGroup>
+      </div>
+
+      <button type="button" onClick={() => save.mutate()} disabled={save.isPending}
+        className="mt-5 w-full rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
+        {save.isPending ? "저장 중…" : "저장"}
+      </button>
+    </Modal>
+  );
+}
+
+function MatGroup({ title, onAdd, children }: { title: string; onAdd: () => void; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-bold text-neutral-500">{title}</p>
+        <button type="button" onClick={onAdd} className="rounded-full border border-neutral-400 px-2.5 py-0.5 text-xs text-neutral-500 hover:border-neutral-900 hover:text-neutral-900 dark:hover:border-neutral-100 dark:hover:text-neutral-100">+ 추가</button>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
   );
 }
 

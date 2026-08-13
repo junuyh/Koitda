@@ -200,6 +200,31 @@ public class ProjectService {
 				.map(ProjectListItemResponse::from).toList();
 	}
 
+	/** 니팅로그 재료(실·바늘·게이지) 전체 교체. 소유자만. 교체 후 상세 반환. */
+	@Transactional
+	public ProjectDetailResponse replaceMaterials(Long userId, Long projectId,
+			com.koitda.project.dto.UpdateMaterialsRequest req) {
+		ownedProject(projectId, userId);
+		yarnRepository.deleteByProjectId(projectId);
+		needleRepository.deleteByProjectId(projectId);
+		gaugeRepository.deleteByProjectId(projectId);
+		int i = 0;
+		for (var y : req.yarnsOrEmpty()) {
+			yarnRepository.save(new ProjectYarn(projectId, y.brand(), y.yarnName(), y.color(),
+					y.amount(), y.unit(), y.note(), i++));
+		}
+		i = 0;
+		for (var n : req.needlesOrEmpty()) {
+			needleRepository.save(new ProjectNeedle(projectId, n.needleType(), n.sizeMm(), n.lengthCm(), n.note(), i++));
+		}
+		i = 0;
+		for (var g : req.gaugesOrEmpty()) {
+			gaugeRepository.save(new ProjectGauge(projectId, g.stitches(), g.rows(), g.swatchWidthCm(),
+					g.swatchHeightCm(), g.needleSizeMm(), g.measuredStage(), i++));
+		}
+		return detail(projectId, userId);
+	}
+
 	/** 대표 이미지 추가(PROJECT-010). 최대 7개. 소유자만. 추가 후 상세를 반환. */
 	@Transactional
 	public ProjectDetailResponse addImage(Long userId, Long projectId, Long fileId) {

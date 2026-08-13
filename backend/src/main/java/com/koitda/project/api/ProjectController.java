@@ -49,6 +49,14 @@ public class ProjectController {
 		return projectService.myProjects(principal.getUserId());
 	}
 
+	/** 니팅로그 재료(실·바늘·게이지) 교체. 소유자만. */
+	@PatchMapping("/{projectId}/materials")
+	public ProjectDetailResponse updateMaterials(@PathVariable Long projectId,
+			@RequestBody com.koitda.project.dto.UpdateMaterialsRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.replaceMaterials(principal.getUserId(), projectId, request);
+	}
+
 	/** 대표 이미지 추가(PROJECT-010). 소유자만. body: {fileId}. */
 	@PostMapping("/{projectId}/images")
 	public ProjectDetailResponse addImage(@PathVariable Long projectId,
