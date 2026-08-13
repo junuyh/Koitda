@@ -24,9 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
 	private final UserRepository userRepository;
+	private final EmailVerificationService verificationService;
+	private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-	public UserController(UserRepository userRepository) {
+	public UserController(UserRepository userRepository, EmailVerificationService verificationService,
+			org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
+		this.verificationService = verificationService;
+		this.passwordEncoder = passwordEncoder;
 	}
 
 	@GetMapping
@@ -45,6 +50,32 @@ public class UserController {
 	}
 
 	public record UpdateProfileRequest(@NotBlank @Size(max = 30) String nickname) {
+	}
+
+	/** 비밀번호 변경용 이메일 인증번호 발급(데모: 응답에 코드 노출). */
+	@org.springframework.web.bind.annotation.PostMapping("/password/verification")
+	public VerificationIssued issuePasswordCode(@AuthenticationPrincipal CustomUserDetails principal) {
+		User user = currentUser(principal);
+		String code = verificationService.issue(user.getId());
+		return new VerificationIssued(user.getEmail(), code);
+	}
+
+	/** 비밀번호 변경 — 이메일 인증번호 확인 후 적용. */
+	@PatchMapping("/password")
+	@Transactional
+	public void changePassword(@Valid @RequestBody ChangePasswordRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		User user = currentUser(principal);
+		verificationService.verify(user.getId(), request.code());
+		user.changePassword(passwordEncoder.encode(request.newPassword()));
+		userRepository.save(user);
+	}
+
+	/** 데모: demoCode 는 실제 운영에서 메일로만 전달하고 응답에서 제거한다. */
+	public record VerificationIssued(String email, String demoCode) {
+	}
+
+	public record ChangePasswordRequest(@NotBlank String code, @NotBlank @Size(min = 8, max = 72) String newPassword) {
 	}
 
 	@GetMapping("/roles")

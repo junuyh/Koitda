@@ -12,12 +12,6 @@ const STATUS_LABEL: Record<string, string> = {
   PLANNED: "준비 중", CO: "코잡기", WIP: "뜨는 중", UFO: "잠시 멈춤", FO: "완성",
 };
 
-const RECORD = [
-  { href: "/coitgi", emoji: "🧶", label: "코잇기", desc: "도안별로 묶어 보는 니팅로그", accent: "bg-amber-100 dark:bg-amber-950/40" },
-  { href: "/projects", emoji: "📒", label: "내 니팅로그", desc: "작품 하나씩의 제작 기록", accent: "bg-sky-100 dark:bg-sky-950/40" },
-  { emoji: "🧵", label: "실타래", desc: "뜨개 일상·위시 자유글 (곧 제공)", soon: true, accent: "bg-neutral-100 dark:bg-neutral-800" },
-];
-
 const PURCHASE = [
   { href: "/library", emoji: "📥", label: "구매 내역", desc: "주문·다운로드", accent: "bg-emerald-100 dark:bg-emerald-950/40" },
   { href: "/wishlist", emoji: "🤍", label: "위시리스트", desc: "찜한 도안 관리", accent: "bg-rose-100 dark:bg-rose-950/40" },
@@ -57,18 +51,6 @@ export default function MyPage() {
           <span className="block text-[11px] font-bold uppercase tracking-wider text-amber-800/70 dark:text-amber-300/70">포인트</span>
           <span className="text-2xl font-black text-amber-950 dark:text-amber-200">{point.toLocaleString()}<span className="ml-0.5 text-sm">P</span></span>
         </Link>
-      </section>
-
-      {/* 기록 */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-xl font-black tracking-tight">기록</h2>
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {RECORD.map((it) => (
-            <li key={it.label}>
-              {it.soon || !it.href ? <RecordCard item={it} /> : <Link href={it.href} className="block h-full"><RecordCard item={it} /></Link>}
-            </li>
-          ))}
-        </ul>
       </section>
 
       {/* 구매 */}

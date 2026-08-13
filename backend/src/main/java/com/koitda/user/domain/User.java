@@ -117,6 +117,11 @@ public class User {
 		this.nickname = nickname;
 	}
 
+	/** 비밀번호 변경 — 인자는 이미 해시된 값(BCrypt). */
+	public void changePassword(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
+
 	/**
 	 * 포인트 잔액 캐시를 delta 만큼 조정한다(진실의 출처는 POINT_TRANSACTION).
 	 * 음수 잔액은 불변식 위반이므로 막는다. 호출자는 거래 원장도 함께 기록해야 한다.

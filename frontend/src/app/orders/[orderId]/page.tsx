@@ -44,19 +44,16 @@ export default function OrderDetailPage() {
             <button type="button" disabled title="곧 제공"
               className="rounded-full border-2 border-neutral-300 py-2 text-sm font-bold text-neutral-400 dark:border-neutral-700">문의하기</button>
             <Link href={`/patterns/${first.patternId}/reviews/new`}
-              className="rounded-full border-2 border-neutral-900 py-2 text-center text-sm font-bold dark:border-neutral-100">후기 작성</Link>
+              className="rounded-full border-2 border-neutral-900 py-2 text-center text-sm font-bold dark:border-neutral-100">리뷰 작성</Link>
             <Link href={`/library/${first.patternId}`}
-              className="rounded-full border-2 border-orange-500 py-2 text-center text-sm font-bold text-orange-500 transition hover:bg-orange-50 dark:hover:bg-orange-950/30">다운로드</Link>
+              className="rounded-full border-2 border-neutral-900 bg-neutral-900 py-2 text-center text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">다운로드</Link>
           </div>
         )}
       </section>
 
-      {/* 주문자 정보 */}
+      {/* 주문자 정보 (조회 전용 — 수정은 마이페이지) */}
       <section className="mt-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-black tracking-tight">주문자 정보</h2>
-          <Link href="/me/settings" className="text-sm font-bold text-orange-500 hover:underline">정보 수정</Link>
-        </div>
+        <h2 className="mb-2 text-lg font-black tracking-tight">주문자 정보</h2>
         <dl className="rounded-2xl border-2 border-neutral-900 p-5 text-sm dark:border-neutral-100">
           <Row label="이름">{o.buyerName}</Row>
           <Row label="이메일">{o.buyerEmail}</Row>

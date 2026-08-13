@@ -46,7 +46,7 @@ function OrderCard({ o }: { o: OrderListItem }) {
     <div className="overflow-hidden rounded-2xl border-2 border-neutral-900 bg-white dark:border-neutral-100 dark:bg-neutral-950">
       <div className="flex items-center justify-between border-b-2 border-dashed border-neutral-200 px-5 py-3 dark:border-neutral-800">
         <p className="text-sm font-black">{date} 주문</p>
-        <Link href={`/orders/${o.id}`} className="text-sm font-bold text-orange-500 hover:underline">주문 상세보기 ›</Link>
+        <Link href={`/orders/${o.id}`} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 hover:underline dark:hover:text-neutral-100">주문 상세보기 ›</Link>
       </div>
       <div className="p-5">
         <p className="text-sm font-bold">{STATUS_LABEL[o.status] ?? o.status} · {date} {time}</p>
@@ -62,9 +62,9 @@ function OrderCard({ o }: { o: OrderListItem }) {
             <button type="button" disabled title="곧 제공"
               className="rounded-full border-2 border-neutral-300 py-2 text-sm font-bold text-neutral-400 dark:border-neutral-700">문의하기</button>
             <Link href={`/patterns/${first.patternId}/reviews/new`}
-              className="rounded-full border-2 border-neutral-900 py-2 text-center text-sm font-bold dark:border-neutral-100">후기 작성</Link>
+              className="rounded-full border-2 border-neutral-900 py-2 text-center text-sm font-bold dark:border-neutral-100">리뷰 작성</Link>
             <Link href={`/library/${first.patternId}`}
-              className="rounded-full border-2 border-orange-500 py-2 text-center text-sm font-bold text-orange-500 transition hover:bg-orange-50 dark:hover:bg-orange-950/30">다운로드</Link>
+              className="rounded-full border-2 border-neutral-900 bg-neutral-900 py-2 text-center text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">다운로드</Link>
           </div>
         )}
       </div>
