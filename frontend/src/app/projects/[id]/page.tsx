@@ -3,8 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { fileApi } from "@/features/file/api";
 import { projectApi, STATUS_LABEL, type LogItem } from "@/features/project/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { GaugeResultView } from "@/features/gauge/GaugeResultView";
@@ -100,6 +101,8 @@ export default function ProjectDetailPage() {
   // 오늘의 로그 팝업(모달)로 열린 로그. 리스트가 이미 본문을 담고 있어 추가 조회 없이 연다.
   const [openLog, setOpenLog] = useState<LogItem | null>(null);
   const [writeOpen, setWriteOpen] = useState(false); // 작성 폼 팝업
+  const [editTarget, setEditTarget] = useState<LogItem | null>(null); // 수정 폼 팝업
+  const [photoOpen, setPhotoOpen] = useState(false); // 대표 이미지 관리 팝업
   const [logPage, setLogPage] = useState(0); // 로그 리스트 페이지(15개씩)
 
   const invalidate = () => {
@@ -122,6 +125,11 @@ export default function ProjectDetailPage() {
         await projectApi.changeVisibility(id, "PUBLIC", false);
       }
     },
+    onSuccess: invalidate,
+  });
+
+  const deleteLog = useMutation({
+    mutationFn: (postId: number) => projectApi.deleteLog(id, postId),
     onSuccess: invalidate,
   });
 
@@ -179,6 +187,10 @@ export default function ProjectDetailPage() {
             <span className={`absolute left-4 top-4 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
               {STATUS_LABEL[p.status] ?? p.status}
             </span>
+            <button type="button" onClick={() => setPhotoOpen(true)}
+              className="absolute right-4 top-4 rounded-full border-2 border-neutral-900 bg-white/90 px-3 py-1 text-xs font-bold text-neutral-900 transition hover:bg-white">
+              📷 사진
+            </button>
           </div>
 
           <div className="p-5">
@@ -379,7 +391,17 @@ export default function ProjectDetailPage() {
         </section>
       </div>
 
-      {openLog && <LogModal log={openLog} onClose={() => setOpenLog(null)} />}
+      {openLog && (
+        <LogModal log={openLog}
+          onClose={() => setOpenLog(null)}
+          onEdit={() => { const l = openLog; setOpenLog(null); setEditTarget(l); }}
+          onDelete={() => {
+            if (window.confirm("이 오늘의 로그를 삭제할까요?")) {
+              deleteLog.mutate(openLog.id, { onSuccess: () => setOpenLog(null) });
+            }
+          }}
+        />
+      )}
 
       {writeOpen && (
         <Modal onClose={() => setWriteOpen(false)} maxWidth="max-w-3xl">
@@ -395,6 +417,26 @@ export default function ProjectDetailPage() {
               onDone={() => { invalidate(); setWriteOpen(false); }} />
           </div>
         </Modal>
+      )}
+
+      {editTarget && (
+        <Modal onClose={() => setEditTarget(null)} maxWidth="max-w-3xl">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-black tracking-tight">오늘의 로그 수정</h3>
+            <button type="button" onClick={() => setEditTarget(null)} aria-label="닫기"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
+              ✕
+            </button>
+          </div>
+          <div className="mt-4">
+            <QuickLogForm projectId={id} currentStatus={p.status} projectVisibility={p.visibility}
+              edit={editTarget} onDone={() => { invalidate(); setEditTarget(null); }} />
+          </div>
+        </Modal>
+      )}
+
+      {photoOpen && (
+        <PhotoModal projectId={id} images={p.images} onClose={() => setPhotoOpen(false)} onChanged={invalidate} />
       )}
     </main>
   );
@@ -422,7 +464,9 @@ function Modal({ onClose, children, maxWidth = "max-w-2xl" }: { onClose: () => v
 }
 
 /** 오늘의 로그 본문 팝업. 리스트에서 넘겨받은 데이터로 본문을 렌더한다. */
-function LogModal({ log, onClose }: { log: LogItem; onClose: () => void }) {
+function LogModal({ log, onClose, onEdit, onDelete }: {
+  log: LogItem; onClose: () => void; onEdit: () => void; onDelete: () => void;
+}) {
   return (
     <Modal onClose={onClose}>
       <div className="flex items-start justify-between gap-3">
@@ -436,10 +480,16 @@ function LogModal({ log, onClose }: { log: LogItem; onClose: () => void }) {
           </div>
           <h3 className="mt-2 text-xl font-black tracking-tight">{log.displayTitle}</h3>
         </div>
-        <button type="button" onClick={onClose} aria-label="닫기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
-          ✕
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={onEdit}
+            className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">수정</button>
+          <button type="button" onClick={onDelete}
+            className="rounded-full border-2 border-red-500 px-3 py-1 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">삭제</button>
+          <button type="button" onClick={onClose} aria-label="닫기"
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
+            ✕
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -457,36 +507,104 @@ function LogModal({ log, onClose }: { log: LogItem; onClose: () => void }) {
   );
 }
 
+/** 대표 이미지 관리 팝업 — 현재 이미지 목록 + 삭제 + 업로드하여 추가(최대 7). */
+function PhotoModal({ projectId, images, onClose, onChanged }: {
+  projectId: number;
+  images: Array<{ fileId: number | null; url: string | null }>;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const remove = useMutation({
+    mutationFn: (fileId: number) => projectApi.removeImage(projectId, fileId),
+    onSuccess: onChanged,
+  });
+
+  async function onPick(files: FileList | null) {
+    if (!files || !files[0]) return;
+    setBusy(true);
+    try {
+      const res = await fileApi.upload(files[0], "PROJECT_IMAGE");
+      await projectApi.addImage(projectId, res.id);
+      onChanged();
+    } catch {
+      window.alert("이미지 업로드에 실패했습니다.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  const shown = images.filter((im) => im.url && im.fileId != null);
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-lg">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-black tracking-tight">사진 관리</h3>
+        <button type="button" onClick={onClose} aria-label="닫기"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">✕</button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {shown.map((im) => (
+          <div key={im.fileId} className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={im.url as string} alt="" className="h-24 w-24 rounded-xl border-2 border-neutral-900 object-cover dark:border-neutral-100" />
+            <button type="button" onClick={() => remove.mutate(im.fileId as number)} disabled={remove.isPending}
+              aria-label="삭제"
+              className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-neutral-900 bg-white text-xs font-bold dark:border-neutral-100 dark:bg-neutral-950">✕</button>
+          </div>
+        ))}
+        {shown.length === 0 && <p className="py-4 text-sm text-neutral-400">등록된 사진이 없습니다.</p>}
+      </div>
+
+      {shown.length < 7 && (
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={busy}
+          className="mt-4 w-full rounded-full border-2 border-dashed border-neutral-400 py-3 text-sm font-bold text-neutral-500 transition hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-50 dark:hover:border-neutral-100 dark:hover:text-neutral-100">
+          {busy ? "업로드 중…" : "＋ 사진 추가"}
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files)} />
+    </Modal>
+  );
+}
+
 function QuickLogForm({
-  projectId, currentStatus, projectVisibility, onDone,
-}: { projectId: number; currentStatus: string; projectVisibility: string; onDone: () => void }) {
-  const [status, setStatus] = useState("CO");
-  const [title, setTitle] = useState("");
-  const [docJson, setDocJson] = useState<JSONContent | null>(null);
-  const [docText, setDocText] = useState("");
+  projectId, currentStatus, projectVisibility, edit, onDone,
+}: { projectId: number; currentStatus: string; projectVisibility: string; edit?: LogItem | null; onDone: () => void }) {
+  const isEdit = !!edit;
+  const [status, setStatus] = useState(edit?.knittingStatus ?? "CO");
+  const [title, setTitle] = useState(edit?.displayTitle ?? "");
+  const [docJson, setDocJson] = useState<JSONContent | null>((edit?.contentDocument as JSONContent) ?? null);
+  const [docText, setDocText] = useState(edit?.comment ?? "");
   const [makePublic, setMakePublic] = useState(false);
   const [editorKey, setEditorKey] = useState(0); // 제출 후 에디터 초기화용
 
-  useEffect(() => { setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus); }, [currentStatus]);
+  useEffect(() => { if (!isEdit) setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus); }, [currentStatus, isEdit]);
 
   const submit = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const hasBody = docText.trim().length > 0;
-      const body: Parameters<typeof projectApi.createLog>[1] = {
+      const body = {
         knittingStatus: status,
         title: title.trim() || undefined,
         comment: docText.trim() || undefined,
         contentDocument: hasBody ? (docJson ?? undefined) : undefined,
       };
+      if (isEdit) {
+        await projectApi.updateLog(projectId, edit!.id, body);
+        return;
+      }
+      const createBody: Parameters<typeof projectApi.createLog>[1] = { ...body };
       if (makePublic) {
-        body.visibility = "PUBLIC";
+        createBody.visibility = "PUBLIC";
         if (projectVisibility === "PRIVATE") {
-          body.publishProjectConfirmed = window.confirm("이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?");
+          createBody.publishProjectConfirmed = window.confirm("이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?");
         }
       }
-      return projectApi.createLog(projectId, body);
+      await projectApi.createLog(projectId, createBody);
     },
-    onSuccess: () => { setTitle(""); setDocJson(null); setDocText(""); setMakePublic(false); setEditorKey((k) => k + 1); onDone(); },
+    onSuccess: () => { if (!isEdit) { setTitle(""); setDocJson(null); setDocText(""); setEditorKey((k) => k + 1); } setMakePublic(false); onDone(); },
   });
 
   return (
@@ -496,19 +614,24 @@ function QuickLogForm({
           className="rounded-full border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm dark:border-neutral-100">
           {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
-        <label className="flex items-center gap-2 text-xs text-neutral-500">
-          <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
-          이 로그 공개
-        </label>
+        {!isEdit && (
+          <label className="flex items-center gap-2 text-xs text-neutral-500">
+            <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
+            이 로그 공개
+          </label>
+        )}
       </div>
       <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60}
         placeholder="제목 (비우면 날짜로 자동 지정)" aria-label="로그 제목"
         className="mb-2 w-full rounded-xl border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm font-bold outline-none dark:border-neutral-100" />
       <RichEditor key={editorKey} usageType="PROJECT_IMAGE" placeholder="오늘의 기록 — 줄글·사진·표"
+        initial={(edit?.contentDocument as JSONContent) ?? null}
         onChange={(v) => { setDocJson(v.json); setDocText(v.text); }} />
       <div className="mt-3 flex justify-center">
-        <button type="submit" disabled={submit.isPending || !docText.trim()}
-          className="rounded-full border-2 border-neutral-900 bg-lime-300 px-8 py-2 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100">기록</button>
+        <button type="submit" disabled={submit.isPending || (!isEdit && !docText.trim())}
+          className="rounded-full border-2 border-neutral-900 bg-lime-300 px-8 py-2 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100">
+          {isEdit ? "수정" : "기록"}
+        </button>
       </div>
     </form>
   );

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { patternApi } from "@/features/pattern/api";
+import { patternApi, type PatternDetail } from "@/features/pattern/api";
 import { projectApi, type CreateProjectBody } from "@/features/project/api";
 import { ImageUploader } from "@/features/file/ImageUploader";
 
@@ -117,13 +117,16 @@ function NewProjectForm() {
 
           {connection === "CATALOG" ? (
             selectedPatternId ? (
-              <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700">
-                <span className="text-sm">
-                  연결됨: <span className="font-medium">{selectedPattern?.title ?? `#${selectedPatternId}`}</span>
-                  <span className="ml-2 text-xs text-neutral-500">연결 시 원작 게이지·사이즈가 스냅샷으로 복사됩니다.</span>
-                </span>
-                <button type="button" onClick={() => { setSelectedPatternId(null); setSearch(""); }} className="text-xs text-neutral-500 hover:underline">변경</button>
-              </div>
+              <>
+                <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700">
+                  <span className="text-sm">
+                    연결됨: <span className="font-medium">{selectedPattern?.title ?? `#${selectedPatternId}`}</span>
+                    <span className="ml-2 text-xs text-neutral-500">연결 시 아래 원작 정보가 스냅샷으로 복사됩니다.</span>
+                  </span>
+                  <button type="button" onClick={() => { setSelectedPatternId(null); setSearch(""); }} className="text-xs text-neutral-500 hover:underline">변경</button>
+                </div>
+                {selectedPattern && <PatternPreview p={selectedPattern} />}
+              </>
             ) : (
               <div>
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="도안명·원작자로 검색" className={inputClass} />
@@ -227,6 +230,68 @@ function Section({ title, onAdd, children }: { title: string; onAdd?: () => void
       </div>
       <div className="space-y-2">{children}</div>
     </section>
+  );
+}
+
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+const MEASURE_LABEL: Record<string, string> = {
+  chestCm: "가슴둘레", lengthCm: "총장", sleeveLengthCm: "소매길이", shoulderCm: "어깨너비",
+  widthCm: "가로", heightCm: "세로",
+};
+
+/** 선택한 도안의 원작 정보 미리보기 — 연결 시 스냅샷으로 복사될 내용을 등록 전에 확인. */
+function PatternPreview({ p }: { p: PatternDetail }) {
+  const sizeKeys = p.sizeInfo?.sizes?.[0] ? Object.keys(p.sizeInfo.sizes[0].measurements) : [];
+  return (
+    <div className="mt-3 rounded-xl border-2 border-dashed border-neutral-400 p-3 text-sm dark:border-neutral-600">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-neutral-400">원작 정보 (연결 시 복사)</p>
+      <dl className="space-y-1">
+        {p.categoryName && <PRow label="카테고리">{p.categoryName}</PRow>}
+        {p.craftType && <PRow label="구분">{CRAFT_LABEL[p.craftType] ?? p.craftType}</PRow>}
+        {p.difficulty && <PRow label="난이도">{p.difficulty}</PRow>}
+        {p.language && <PRow label="언어">{p.language}</PRow>}
+        {p.gaugeInfo && (p.gaugeInfo.stitches != null || p.gaugeInfo.rows != null) && (
+          <PRow label="게이지">
+            {p.gaugeInfo.stitches}코 × {p.gaugeInfo.rows}단
+            {p.gaugeInfo.needleSizeMm ? ` · 바늘 ${p.gaugeInfo.needleSizeMm}mm` : ""}
+          </PRow>
+        )}
+        {p.yarnRequirement && <PRow label="실 소요량">{p.yarnRequirement}</PRow>}
+        {p.pageCount != null && <PRow label="페이지">{p.pageCount}p</PRow>}
+      </dl>
+
+      {p.sizeInfo && p.sizeInfo.sizes.length > 0 && (
+        <div className="mt-2 overflow-x-auto">
+          <table className="w-full min-w-[320px] text-xs">
+            <thead>
+              <tr className="border-b border-neutral-300 text-left dark:border-neutral-700">
+                <th className="py-1 pr-3 font-bold">사이즈</th>
+                <th className="py-1 pr-3 font-bold">시작 콧수</th>
+                {sizeKeys.map((k) => <th key={k} className="py-1 pr-3 font-bold">{MEASURE_LABEL[k] ?? k}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {p.sizeInfo.sizes.map((s) => (
+                <tr key={s.label} className="border-b border-neutral-100 dark:border-neutral-900">
+                  <td className="py-1 pr-3">{s.label}</td>
+                  <td className="py-1 pr-3">{s.castOnStitches}코</td>
+                  {sizeKeys.map((k) => <td key={k} className="py-1 pr-3">{s.measurements[k]}cm</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <dt className="w-16 shrink-0 text-neutral-400">{label}</dt>
+      <dd className="min-w-0 text-neutral-800 dark:text-neutral-200">{children}</dd>
+    </div>
   );
 }
 

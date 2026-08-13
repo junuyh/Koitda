@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,5 +43,21 @@ public class LogController {
 	public List<LogResponse> list(@PathVariable Long projectId,
 			@AuthenticationPrincipal CustomUserDetails principal) {
 		return logService.listLogs(projectId, principal.getUserId());
+	}
+
+	/** 오늘의 로그 수정. 소유자 필요. */
+	@PatchMapping("/{postId}")
+	public LogResponse update(@PathVariable Long projectId, @PathVariable Long postId,
+			@Valid @RequestBody CreateLogRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return logService.updateLog(principal.getUserId(), projectId, postId, request);
+	}
+
+	/** 오늘의 로그 삭제(논리 삭제). 소유자 필요. */
+	@DeleteMapping("/{postId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@PathVariable Long projectId, @PathVariable Long postId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		logService.deleteLog(principal.getUserId(), projectId, postId);
 	}
 }

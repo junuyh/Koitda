@@ -123,6 +123,13 @@ public class KnittingProject {
 		this.publicLogCount++;
 	}
 
+	/** 공개 로그 수 감소(공개 로그 삭제 시). 0 미만으로 내려가지 않는다. */
+	public void decreasePublicLogCount() {
+		if (this.publicLogCount > 0) {
+			this.publicLogCount--;
+		}
+	}
+
 	/** 상향 전파 — 니팅로그를 공개로 전환(POST-011). */
 	public void publish() {
 		this.visibility = ProjectVisibility.PUBLIC;

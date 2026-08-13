@@ -95,6 +95,25 @@ public class ContentPost {
 		return post;
 	}
 
+	/** 오늘의 로그 수정. 공개 설정은 상하향 전파 흐름이 따로 있어 여기서 바꾸지 않는다. */
+	public void editLog(ProjectStatus knittingStatus, String title, String displayTitle,
+			String contentText, String contentDocument) {
+		this.knittingStatus = knittingStatus;
+		this.title = title;
+		this.displayTitle = displayTitle;
+		this.contentText = contentText;
+		this.contentDocument = contentDocument;
+	}
+
+	/** 논리 삭제(휴지통이 아닌 개별 로그 삭제 — 즉시 목록에서 제외). */
+	public void softDelete() {
+		this.deletedAt = OffsetDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return deletedAt != null;
+	}
+
 	@PrePersist
 	void onCreate() {
 		OffsetDateTime now = OffsetDateTime.now();

@@ -25,7 +25,7 @@ public record ProjectDetailResponse(
 		List<Gauge> gauges,
 		List<Image> images) {
 
-	public record Image(String url) {
+	public record Image(Long fileId, String url) {
 	}
 
 	public record ExternalInfo(String title, String creatorName) {

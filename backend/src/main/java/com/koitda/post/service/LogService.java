@@ -79,6 +79,56 @@ public class LogService {
 				logVisibility.name(), project.getStatus().name(), projectPublished);
 	}
 
+	/** 오늘의 로그 수정(POST). 상태가 바뀌면 니팅로그 파생 상태도 재계산한다. */
+	@Transactional
+	public LogResponse updateLog(Long userId, Long projectId, Long postId, CreateLogRequest req) {
+		KnittingProject project = ownedProject(projectId, userId);
+		ContentPost post = ownedLog(projectId, postId, userId);
+
+		// 제목을 주면 그 값으로, 비우면 기존 표시 제목을 유지한다(날짜 카운터 재계산은 생략).
+		String displayTitle = (req.title() != null && !req.title().isBlank())
+				? req.title().trim() : post.getDisplayTitle();
+		String contentDocumentJson = req.contentDocument() == null ? null
+				: objectMapper.writeValueAsString(req.contentDocument());
+
+		post.editLog(req.knittingStatus(), req.title(), displayTitle, req.comment(), contentDocumentJson);
+		recomputeStatus(project);
+		projectRepository.save(project);
+		return LogResponse.from(post);
+	}
+
+	/** 오늘의 로그 삭제(논리 삭제). 공개 로그면 공개 카운트 감소, 상태 재계산. */
+	@Transactional
+	public void deleteLog(Long userId, Long projectId, Long postId) {
+		KnittingProject project = ownedProject(projectId, userId);
+		ContentPost post = ownedLog(projectId, postId, userId);
+		if (post.getVisibility() == ProjectVisibility.PUBLIC) {
+			project.decreasePublicLogCount();
+		}
+		post.softDelete();
+		recomputeStatus(project);
+		projectRepository.save(project);
+	}
+
+	/** 남은 최신 로그의 상태로 니팅로그 상태를 재계산. 로그가 없으면 준비 중으로. */
+	private void recomputeStatus(KnittingProject project) {
+		postRepository.findFirstByProjectIdAndPostTypeAndDeletedAtIsNullOrderByLogDateDescCreatedAtDesc(
+						project.getId(), PostType.PROJECT_LOG)
+				.ifPresentOrElse(
+						latest -> project.changeStatus(latest.getKnittingStatus()),
+						() -> project.changeStatus(com.koitda.project.domain.ProjectStatus.PLANNED));
+	}
+
+	private ContentPost ownedLog(Long projectId, Long postId, Long userId) {
+		ContentPost post = postRepository.findById(postId)
+				.filter(p -> p.getPostType() == PostType.PROJECT_LOG)
+				.filter(p -> projectId.equals(p.getProjectId()))
+				.filter(p -> userId.equals(p.getUserId()))
+				.filter(p -> !p.isDeleted())
+				.orElseThrow(() -> new ApiException(ErrorCode.PROJECT_NOT_FOUND, "로그를 찾을 수 없습니다."));
+		return post;
+	}
+
 	@Transactional(readOnly = true)
 	public List<LogResponse> listLogs(Long projectId, Long userId) {
 		KnittingProject project = projectRepository.findByIdAndDeletedAtIsNull(projectId)

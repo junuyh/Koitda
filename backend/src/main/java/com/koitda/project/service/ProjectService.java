@@ -200,6 +200,32 @@ public class ProjectService {
 				.map(ProjectListItemResponse::from).toList();
 	}
 
+	/** 대표 이미지 추가(PROJECT-010). 최대 7개. 소유자만. 추가 후 상세를 반환. */
+	@Transactional
+	public ProjectDetailResponse addImage(Long userId, Long projectId, Long fileId) {
+		ownedProject(projectId, userId);
+		if (!fileAssetRepository.existsById(fileId)) {
+			throw new ApiException(ErrorCode.FILE_NOT_FOUND, "파일을 찾을 수 없습니다.");
+		}
+		long count = imageRepository.countByProjectId(projectId);
+		if (count >= 7) {
+			throw new ApiException(ErrorCode.VALIDATION_ERROR, "대표 이미지는 최대 7개까지 등록할 수 있습니다.");
+		}
+		if (imageRepository.findByProjectIdAndFile_Id(projectId, fileId).isEmpty()) {
+			imageRepository.save(new ProjectImage(projectId, fileAssetRepository.getReferenceById(fileId), (int) count));
+		}
+		return detail(projectId, userId);
+	}
+
+	/** 대표 이미지 삭제. 소유자만. */
+	@Transactional
+	public ProjectDetailResponse removeImage(Long userId, Long projectId, Long fileId) {
+		ownedProject(projectId, userId);
+		imageRepository.findByProjectIdAndFile_Id(projectId, fileId)
+				.ifPresent(imageRepository::delete);
+		return detail(projectId, userId);
+	}
+
 	/** 공개 니팅로그 피드(둘러보기). sort=likes|recent, 오프셋 페이지네이션. 비로그인도 조회. */
 	@Transactional(readOnly = true)
 	public List<com.koitda.project.dto.ProjectFeedItemResponse> publicFeed(String sort, int page, int size) {
@@ -255,6 +281,7 @@ public class ProjectService {
 
 		List<ProjectDetailResponse.Image> images = imageRepository.findByProject(projectId).stream()
 				.map(pi -> new ProjectDetailResponse.Image(
+						pi.getFile() != null ? pi.getFile().getId() : null,
 						pi.getFile() != null ? "/api/v1/files/" + pi.getFile().getId() : null))
 				.toList();
 

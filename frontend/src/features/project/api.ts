@@ -45,7 +45,7 @@ export type ProjectDetail = {
   yarns: Array<{ brand: string | null; yarnName: string | null; color: string | null; amount: string | null; unit: string | null; note: string | null }>;
   needles: Array<{ needleType: string | null; sizeMm: number | null; lengthCm: number | null; note: string | null }>;
   gauges: MaterialGauge[];
-  images: Array<{ url: string | null }>;
+  images: Array<{ fileId: number | null; url: string | null }>;
 };
 
 export type TrashItem = {
@@ -105,6 +105,17 @@ export const projectApi = {
   create: (body: CreateProjectBody) =>
     apiFetch<{ id: number; displayTitle: string }>("/projects", { method: "POST", body }),
   logs: (projectId: number) => apiFetch<LogItem[]>(`/projects/${projectId}/posts`),
+  updateLog: (
+    projectId: number,
+    postId: number,
+    body: { knittingStatus: string; title?: string; comment?: string; contentDocument?: unknown },
+  ) => apiFetch<LogItem>(`/projects/${projectId}/posts/${postId}`, { method: "PATCH", body }),
+  deleteLog: (projectId: number, postId: number) =>
+    apiFetch<null>(`/projects/${projectId}/posts/${postId}`, { method: "DELETE" }),
+  addImage: (projectId: number, fileId: number) =>
+    apiFetch<ProjectDetail>(`/projects/${projectId}/images`, { method: "POST", body: { fileId } }),
+  removeImage: (projectId: number, fileId: number) =>
+    apiFetch<ProjectDetail>(`/projects/${projectId}/images/${fileId}`, { method: "DELETE" }),
   createLog: (
     projectId: number,
     body: {

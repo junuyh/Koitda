@@ -49,6 +49,21 @@ public class ProjectController {
 		return projectService.myProjects(principal.getUserId());
 	}
 
+	/** 대표 이미지 추가(PROJECT-010). 소유자만. body: {fileId}. */
+	@PostMapping("/{projectId}/images")
+	public ProjectDetailResponse addImage(@PathVariable Long projectId,
+			@RequestBody com.koitda.project.dto.AddImageRequest request,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.addImage(principal.getUserId(), projectId, request.fileId());
+	}
+
+	/** 대표 이미지 삭제. 소유자만. */
+	@DeleteMapping("/{projectId}/images/{fileId}")
+	public ProjectDetailResponse removeImage(@PathVariable Long projectId, @PathVariable Long fileId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return projectService.removeImage(principal.getUserId(), projectId, fileId);
+	}
+
 	/** 공개 니팅로그 피드(둘러보기, PROJECT-피드). 비로그인도 조회 가능. sort=likes|recent. */
 	@GetMapping("/feed")
 	public List<com.koitda.project.dto.ProjectFeedItemResponse> feed(

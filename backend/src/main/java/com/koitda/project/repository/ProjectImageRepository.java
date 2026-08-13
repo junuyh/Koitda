@@ -12,4 +12,8 @@ public interface ProjectImageRepository extends JpaRepository<ProjectImage, Long
 	@Query("select pi from ProjectImage pi join fetch pi.file where pi.projectId = :projectId "
 			+ "order by pi.sortOrder asc, pi.id asc")
 	List<ProjectImage> findByProject(@Param("projectId") Long projectId);
+
+	long countByProjectId(Long projectId);
+
+	java.util.Optional<ProjectImage> findByProjectIdAndFile_Id(Long projectId, Long fileId);
 }
