@@ -237,6 +237,29 @@ public class ProjectService {
 		return views.stream().map(com.koitda.project.dto.ProjectFeedItemResponse::from).toList();
 	}
 
+	/** 도안별 니팅로그 집계(핵심 가치) — 실·바늘·게이지 실사용 통계. 비로그인도 조회. */
+	@Transactional(readOnly = true)
+	public com.koitda.project.dto.KnittingStatsResponse knittingStats(Long patternId) {
+		long total = projectRepository.countBySellingPatternIdAndDeletedAtIsNull(patternId);
+		long finished = projectRepository.countBySellingPatternIdAndStatusAndDeletedAtIsNull(
+				patternId, com.koitda.project.domain.ProjectStatus.FO);
+		var yarns = yarnRepository.topYarns(patternId).stream().limit(6).map(v -> {
+			String label = java.util.stream.Stream.of(v.getBrand(), v.getYarnName())
+					.filter(s -> s != null && !s.isBlank()).collect(java.util.stream.Collectors.joining(" "));
+			return new com.koitda.project.dto.KnittingStatsResponse.YarnStat(label.isBlank() ? "기타" : label, v.getCnt());
+		}).toList();
+		var needles = needleRepository.topNeedles(patternId).stream().limit(6)
+				.map(v -> new com.koitda.project.dto.KnittingStatsResponse.NeedleStat(plain(v.getSizeMm()), v.getCnt())).toList();
+		var gauges = gaugeRepository.topGauges(patternId).stream().limit(6)
+				.map(v -> new com.koitda.project.dto.KnittingStatsResponse.GaugeStat(
+						plain(v.getStitches()), plain(v.getRows()), v.getCnt())).toList();
+		return new com.koitda.project.dto.KnittingStatsResponse(total, finished, yarns, needles, gauges);
+	}
+
+	private static String plain(java.math.BigDecimal n) {
+		return n == null ? null : n.stripTrailingZeros().toPlainString();
+	}
+
 	/** 코잇기 — 연결 도안 기준 그룹 목록. */
 	@Transactional(readOnly = true)
 	public List<ProjectGroupResponse> groupedByPattern(Long userId) {

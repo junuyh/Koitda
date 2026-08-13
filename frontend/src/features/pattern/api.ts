@@ -32,6 +32,15 @@ export type Category = {
 
 export type WishResult = { wished: boolean; wishCount: number };
 
+/** 도안별 니팅로그 집계 — 실제 제작 정보(핵심 가치). */
+export type KnittingStats = {
+  projectCount: number;
+  finishedCount: number;
+  yarns: Array<{ label: string; count: number }>;
+  needles: Array<{ sizeMm: string; count: number }>;
+  gauges: Array<{ stitches: string; rows: string; count: number }>;
+};
+
 export type GaugeInfo = {
   stitches?: number;
   rows?: number;
@@ -105,6 +114,7 @@ export const patternApi = {
   latest: (size = 12) => apiFetch<PageResponse<PatternListItem>>(`/patterns?size=${size}`),
   bestSellers: (limit = 12) => apiFetch<PatternListItem[]>(`/patterns/best-sellers?limit=${limit}`),
   get: (id: number) => apiFetch<PatternDetail>(`/patterns/${id}`),
+  knittingStats: (id: number) => apiFetch<KnittingStats>(`/patterns/${id}/knitting-stats`),
   categories: () => apiFetch<Category[]>("/pattern-categories"),
   addWish: (id: number) => apiFetch<WishResult>(`/patterns/${id}/wish`, { method: "POST" }),
   removeWish: (id: number) => apiFetch<WishResult>(`/patterns/${id}/wish`, { method: "DELETE" }),

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { authApi } from "@/features/auth/api";
-import { patternApi } from "@/features/pattern/api";
+import { patternApi, type KnittingStats } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
 import { ReviewSection } from "@/features/review/ReviewSection";
 import { RichContent } from "@/features/editor/RichContent";
@@ -36,6 +36,11 @@ export default function PatternDetailPage() {
   const { data: p, isLoading, isError } = useQuery({
     queryKey: ["pattern", id],
     queryFn: () => patternApi.get(id),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ["knitting-stats", id],
+    queryFn: () => patternApi.knittingStats(id),
+    retry: false,
   });
 
   const wish = useMutation({
@@ -169,6 +174,9 @@ export default function PatternDetailPage() {
       </div>
 
       <div className="mt-6 space-y-4">
+      {/* 니팅로그 집계 — 코잇다의 핵심: 다른 사람들이 실제로 어떻게 떴는지 */}
+      {stats && stats.projectCount > 0 && <KnittingStatsSection stats={stats} />}
+
       {/* 게이지 — 모든 도안 통일 표시(미등록도 항목 노출) */}
       <Section title="게이지">
         {p.gaugeInfo ? (
@@ -239,6 +247,58 @@ export default function PatternDetailPage() {
 
       <ReviewSection patternId={id} loggedIn={!!me} />
     </main>
+  );
+}
+
+/** 니팅로그 집계 — 이 도안을 다른 사람들이 어떤 실·바늘·게이지로 떴는지(코잇다의 차별점). */
+function KnittingStatsSection({ stats }: { stats: KnittingStats }) {
+  const max = (arr: Array<{ count: number }>) => Math.max(1, ...arr.map((x) => x.count));
+  return (
+    <section className="rounded-2xl border-2 border-neutral-900 bg-amber-50 p-5 dark:border-neutral-100 dark:bg-amber-950/20">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-black uppercase tracking-[0.15em] text-amber-700 dark:text-amber-300">니팅로그로 보는 실제 제작</h2>
+        <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300">
+          {stats.projectCount}명이 떴어요{stats.finishedCount > 0 ? ` · 완성 ${stats.finishedCount}` : ""}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-5 sm:grid-cols-3">
+        <StatBlock title="🧶 자주 쓴 실" empty="아직 실 기록이 없어요"
+          rows={stats.yarns.map((y) => ({ label: y.label, count: y.count }))} max={max(stats.yarns)} />
+        <StatBlock title="🪡 자주 쓴 바늘" empty="아직 바늘 기록이 없어요"
+          rows={stats.needles.map((n) => ({ label: `${n.sizeMm}mm`, count: n.count }))} max={max(stats.needles)} />
+        <StatBlock title="📏 게이지 분포" empty="아직 게이지 기록이 없어요"
+          rows={stats.gauges.map((g) => ({ label: `${g.stitches}코 × ${g.rows}단`, count: g.count }))} max={max(stats.gauges)} />
+      </div>
+      <p className="mt-3 text-xs text-neutral-400">구매자·제작자들의 니팅로그 기록을 익명 집계한 값입니다.</p>
+    </section>
+  );
+}
+
+function StatBlock({ title, rows, max, empty }: {
+  title: string; rows: Array<{ label: string; count: number }>; max: number; empty: string;
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-bold text-neutral-500">{title}</p>
+      {rows.length === 0 ? (
+        <p className="text-xs text-neutral-400">{empty}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((r, i) => (
+            <li key={i}>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="line-clamp-1 font-medium text-neutral-800 dark:text-neutral-200">{r.label}</span>
+                <span className="shrink-0 font-bold text-neutral-500">{r.count}</span>
+              </div>
+              <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.round((r.count / max) * 100)}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

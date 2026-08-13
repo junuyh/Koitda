@@ -12,6 +12,12 @@ public interface KnittingProjectRepository extends JpaRepository<KnittingProject
 	/** 날짜 기반 제목의 중복 순번 계산용(PROJECT-005). */
 	long countByUserIdAndDisplayTitleStartingWith(Long userId, String prefix);
 
+	/** 도안별 니팅로그 집계 — 전체·완성 수. */
+	long countBySellingPatternIdAndDeletedAtIsNull(Long sellingPatternId);
+
+	long countBySellingPatternIdAndStatusAndDeletedAtIsNull(
+			Long sellingPatternId, com.koitda.project.domain.ProjectStatus status);
+
 	Optional<KnittingProject> findByIdAndDeletedAtIsNull(Long id);
 
 	Optional<KnittingProject> findByIdAndUserId(Long id, Long userId);
