@@ -15,8 +15,12 @@ const STATUS_LABEL: Record<string, string> = {
 const RECORD = [
   { href: "/coitgi", emoji: "🧶", label: "코잇기", desc: "도안별로 묶어 보는 니팅로그", accent: "bg-amber-100 dark:bg-amber-950/40" },
   { href: "/projects", emoji: "📒", label: "내 니팅로그", desc: "작품 하나씩의 제작 기록", accent: "bg-sky-100 dark:bg-sky-950/40" },
-  { href: "/library", emoji: "📥", label: "구매 도안", desc: "구매한 도안과 다운로드", accent: "bg-emerald-100 dark:bg-emerald-950/40" },
   { emoji: "🧵", label: "실타래", desc: "뜨개 일상·위시 자유글 (곧 제공)", soon: true, accent: "bg-neutral-100 dark:bg-neutral-800" },
+];
+
+const PURCHASE = [
+  { href: "/library", emoji: "📥", label: "구매 내역", desc: "주문·다운로드", accent: "bg-emerald-100 dark:bg-emerald-950/40" },
+  { href: "/wishlist", emoji: "🤍", label: "위시리스트", desc: "찜한 도안 관리", accent: "bg-rose-100 dark:bg-rose-950/40" },
 ];
 
 const TABS = [
@@ -67,6 +71,16 @@ export default function MyPage() {
         </ul>
       </section>
 
+      {/* 구매 */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-xl font-black tracking-tight">구매</h2>
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {PURCHASE.map((it) => (
+            <li key={it.label}><Link href={it.href} className="block h-full"><RecordCard item={it} /></Link></li>
+          ))}
+        </ul>
+      </section>
+
       {/* 내 활동 — 인페이지 탭 */}
       <section className="mt-8">
         <h2 className="mb-3 text-xl font-black tracking-tight">내 활동</h2>
@@ -94,7 +108,7 @@ export default function MyPage() {
   );
 }
 
-function RecordCard({ item }: { item: (typeof RECORD)[number] }) {
+function RecordCard({ item }: { item: { emoji: string; label: string; desc: string; accent: string; soon?: boolean; href?: string } }) {
   return (
     <div className={`flex h-full flex-col gap-1 rounded-2xl border-2 border-neutral-900 p-4 transition dark:border-neutral-100 ${item.accent} ${item.soon ? "opacity-60" : "hover:-translate-y-1 hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.9)] dark:hover:shadow-[4px_4px_0_0_rgba(255,255,255,0.9)]"}`}>
       <span className="text-2xl">{item.emoji}</span>

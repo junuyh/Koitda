@@ -108,4 +108,6 @@ export const patternApi = {
   categories: () => apiFetch<Category[]>("/pattern-categories"),
   addWish: (id: number) => apiFetch<WishResult>(`/patterns/${id}/wish`, { method: "POST" }),
   removeWish: (id: number) => apiFetch<WishResult>(`/patterns/${id}/wish`, { method: "DELETE" }),
+  wishes: (page = 0, size = 40) =>
+    apiFetch<PageResponse<PatternListItem>>(`/users/me/wishes?page=${page}&size=${size}`),
 };
