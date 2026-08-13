@@ -24,6 +24,7 @@ export type GaugeBody = {
   swatchHeightCm?: number;
   needleSizeMm?: number;
   text?: string;
+  unit?: string;
 };
 
 export type SizeRow = {
@@ -52,6 +53,7 @@ export type SavePatternDraftBody = {
   gauge?: GaugeBody;
   needle?: Array<{ type: "KNIT" | "CROCHET"; sizeMm: number }>;
   sizes?: SizeRow[];
+  sizeUnit?: string;
   imageFileIds?: number[];
   thumbnailFileId?: number;
   pdfFileId?: number;

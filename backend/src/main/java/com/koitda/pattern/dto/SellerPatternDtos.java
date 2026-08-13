@@ -37,11 +37,13 @@ public final class SellerPatternDtos {
 			JsonNode descriptionDocument,
 			GaugeInput gauge,
 			List<SizeInput> sizes,
+			String sizeUnit,
 			JsonNode needle,
 			JsonNode technique,
 			List<Long> imageFileIds,
 			Long thumbnailFileId,
-			Long pdfFileId) {
+			Long pdfFileId,
+			List<Long> pdfFileIds) {
 	}
 
 	/**
@@ -54,7 +56,8 @@ public final class SellerPatternDtos {
 			Double swatchWidthCm,
 			Double swatchHeightCm,
 			Double needleSizeMm,
-			String text) {
+			String text,
+			String unit) {
 	}
 
 	/** 사이즈 한 행(PATTERN-011): 사이즈명(label)·시작 콧수(castOnStitches)는 필수, 완성 실측은 항목별. */

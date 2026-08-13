@@ -26,10 +26,10 @@ const MEASURE_COLS: Array<{ key: string; label: string }> = [
 ];
 
 type SizeRowState = { label: string; castOnStitches: string } & Record<string, string>;
-type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string; text: string };
+type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string; text: string; unit: string };
 type NeedleRow = { type: "KNIT" | "CROCHET"; sizeMm: string };
 
-const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "", text: "" };
+const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "", text: "", unit: "cm" };
 const emptySize = (): SizeRowState => ({ label: "", castOnStitches: "" });
 const emptyNeedle = (): NeedleRow => ({ type: "KNIT", sizeMm: "" });
 
@@ -62,6 +62,7 @@ function fromPreview(p: SellerPatternPreview): FormState {
           swatchHeightCm: numStr(p.gaugeInfo.swatchHeightCm),
           needleSizeMm: numStr(p.gaugeInfo.needleSizeMm),
           text: (p.gaugeInfo as { text?: string }).text ?? "",
+          unit: (p.gaugeInfo as { unit?: string }).unit ?? "cm",
         }
       : { ...emptyGauge },
     needles: (() => {
@@ -80,6 +81,7 @@ function fromPreview(p: SellerPatternPreview): FormState {
         for (const c of MEASURE_COLS) row[c.key] = numStr(s.measurements?.[c.key]);
         return row;
       }) ?? [emptySize()],
+    sizeUnit: (p.sizeInfo as { unit?: string } | null)?.unit ?? "cm",
   };
 }
 
@@ -106,6 +108,7 @@ type FormState = {
   gauge: GaugeState;
   needles: NeedleRow[];
   sizes: SizeRowState[];
+  sizeUnit: string;
 };
 
 const blankForm: FormState = {
@@ -127,6 +130,7 @@ const blankForm: FormState = {
   gauge: { ...emptyGauge },
   needles: [emptyNeedle()],
   sizes: [emptySize()],
+  sizeUnit: "cm",
 };
 
 export function PatternForm({
@@ -216,9 +220,9 @@ export function PatternForm({
         setError("게이지 값은 모두 0보다 큰 숫자여야 합니다.");
         return null;
       }
-      gauge = { ...nums, text: gaugeText || undefined };
+      gauge = { ...nums, text: gaugeText || undefined, unit: g.unit };
     } else if (gaugeText) {
-      gauge = { text: gaugeText }; // 자유 텍스트만
+      gauge = { text: gaugeText, unit: g.unit }; // 자유 텍스트만
     }
 
     // 사이즈: 사이즈명이 있는 행만 '의도된' 행으로 본다. 시작 콧수는 선택(입력 시 양의 정수).
@@ -269,6 +273,7 @@ export function PatternForm({
       gauge,
       needle: needles.length ? needles : undefined,
       sizes: sizes.length ? sizes : undefined,
+      sizeUnit: form.sizeUnit,
       imageFileIds: imageIds.length ? imageIds : undefined,
       thumbnailFileId: imageIds[0],
       pdfFileId: pdfId ?? undefined,
@@ -333,6 +338,13 @@ export function PatternForm({
       </Section>
 
       <Section title="게이지">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-bold text-neutral-500">단위</span>
+          <select value={form.gauge.unit} onChange={(e) => setGauge("unit", e.target.value)} className={`${inputClass} max-w-24`}>
+            <option value="cm">cm</option>
+            <option value="inch">inch</option>
+          </select>
+        </div>
         <p className="mb-2 text-xs text-neutral-500">
           대바늘은 코수·단수·기준 크기·<b>게이지를 낸 바늘(mm)</b>을 모두 채우거나 모두 비워 주세요(게이지 계산 기준값).
           코바늘은 10×10 게이지가 없을 수 있어요 — 그때는 비우고 아래 자유 서술에 적으세요.
@@ -369,6 +381,13 @@ export function PatternForm({
       </Section>
 
       <Section title="사이즈 · 완성 실측" onAdd={() => set("sizes", [...form.sizes, emptySize()])}>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-bold text-neutral-500">단위</span>
+          <select value={form.sizeUnit} onChange={(e) => set("sizeUnit", e.target.value)} className={`${inputClass} max-w-24`}>
+            <option value="cm">cm</option>
+            <option value="inch">inch</option>
+          </select>
+        </div>
         <p className="mb-2 text-xs text-neutral-500">사이즈명만 필수입니다. 시작 콧수·완성 실측은 선택이며, 실측은 게이지 계산의 기준이 됩니다. (의류 상의·드레스는 가슴둘레 권장)</p>
         <div className="space-y-3">
           {form.sizes.map((row, i) => (

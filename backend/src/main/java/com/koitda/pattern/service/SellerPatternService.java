@@ -203,8 +203,15 @@ public class SellerPatternService {
 
 	private void applyDetails(SellingPattern p, SavePatternDraftRequest req) {
 		String gaugeJson = req.gauge() == null ? null : objectMapper.writeValueAsString(req.gauge());
-		String sizeJson = req.sizes() == null ? null
-				: objectMapper.writeValueAsString(Map.of("sizes", req.sizes()));
+		String sizeJson = null;
+		if (req.sizes() != null) {
+			var sizeMap = new java.util.LinkedHashMap<String, Object>();
+			sizeMap.put("sizes", req.sizes());
+			if (req.sizeUnit() != null && !req.sizeUnit().isBlank()) {
+				sizeMap.put("unit", req.sizeUnit());
+			}
+			sizeJson = objectMapper.writeValueAsString(sizeMap);
+		}
 		String needleJson = req.needle() == null ? null : objectMapper.writeValueAsString(req.needle());
 		String techniqueJson = req.technique() == null ? null : objectMapper.writeValueAsString(req.technique());
 		String descDocJson = req.descriptionDocument() == null ? null
