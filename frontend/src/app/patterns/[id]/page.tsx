@@ -160,9 +160,8 @@ export default function PatternDetailPage() {
                 disabled={purchase.isPending || (purchasability?.canPurchase === false && p.salePrice !== 0)}
                 className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
               >
-                {purchase.isPending ? "처리 중…"
-                  : p.salePrice === 0 ? "무료로 받기"
-                  : `구매하기${p.salePrice != null ? ` · ${p.salePrice.toLocaleString()}원` : ""}`}
+                {purchase.isPending ? "구매 중…"
+                  : `구매하기${p.salePrice != null ? ` · ${p.salePrice === 0 ? "무료" : `${p.salePrice.toLocaleString()}원`}` : ""}`}
               </button>
             )}
           </div>

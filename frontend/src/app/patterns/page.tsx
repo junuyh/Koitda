@@ -158,7 +158,7 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
           <div className="mt-1.5 flex items-center justify-between gap-2">
             <div className="flex items-baseline gap-1.5">
               {pattern.salePrice === 0 ? (
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">무료</span>
+                <span className="text-base font-black text-orange-500">무료</span>
               ) : pattern.salePrice != null ? (
                 <>
                   {pattern.regularPrice != null && pattern.regularPrice > pattern.salePrice && (

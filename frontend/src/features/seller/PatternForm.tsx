@@ -105,7 +105,7 @@ const blankForm: FormState = {
   salePrice: "",
   productForm: "PDF",
   deliveryMethod: "DOWNLOAD",
-  availabilityDays: "",
+  availabilityDays: "365", // 제공 기간 자동 1년(사용자가 바꾸면 그 값)
   referenceVideoUrl: "",
   pageCount: "",
   yarnRequirement: "",
@@ -171,14 +171,18 @@ export function PatternForm({
       }
     }
 
-    // 사이즈: 사이즈명이 있는 행만 '의도된' 행으로 본다. 그 행은 시작 콧수가 필수.
+    // 사이즈: 사이즈명이 있는 행만 '의도된' 행으로 본다. 시작 콧수는 선택(입력 시 양의 정수).
     const sizes: SavePatternDraftBody["sizes"] = [];
     for (const row of form.sizes) {
       if (!row.label.trim()) continue;
-      const cast = Number(row.castOnStitches);
-      if (!Number.isInteger(cast) || cast <= 0) {
-        setError(`'${row.label}' 사이즈의 시작 콧수를 양의 정수로 입력하세요.`);
-        return null;
+      let castOn: number | undefined;
+      if (row.castOnStitches.trim() !== "") {
+        const cast = Number(row.castOnStitches);
+        if (!Number.isInteger(cast) || cast <= 0) {
+          setError(`'${row.label}' 사이즈의 시작 콧수는 양의 정수로 입력하세요(선택 항목).`);
+          return null;
+        }
+        castOn = cast;
       }
       const measurements: Record<string, number> = {};
       for (const c of MEASURE_COLS) {
@@ -192,7 +196,7 @@ export function PatternForm({
           measurements[c.key] = n;
         }
       }
-      sizes.push({ label: row.label.trim(), castOnStitches: cast, measurements });
+      sizes.push({ label: row.label.trim(), castOnStitches: castOn, measurements });
     }
 
     return {
@@ -273,8 +277,8 @@ export function PatternForm({
           <Labeled label="다운로드 방식">
             <input value={form.deliveryMethod} onChange={(e) => set("deliveryMethod", e.target.value)} placeholder="DOWNLOAD" className={inputClass} />
           </Labeled>
-          <Labeled label="제공 기간 (일)">
-            <input inputMode="numeric" value={form.availabilityDays} onChange={(e) => set("availabilityDays", e.target.value)} className={inputClass} />
+          <Labeled label="제공 기간 (일, 기본 1년)">
+            <input inputMode="numeric" value={form.availabilityDays} onChange={(e) => set("availabilityDays", e.target.value)} placeholder="365" className={inputClass} />
           </Labeled>
           <Labeled label="페이지 수">
             <input inputMode="numeric" value={form.pageCount} onChange={(e) => set("pageCount", e.target.value)} className={inputClass} />
@@ -283,18 +287,27 @@ export function PatternForm({
       </Section>
 
       <Section title="게이지">
-        <p className="mb-2 text-xs text-neutral-500">코수·단수·기준 크기·바늘 호수. 모두 채우거나 모두 비워 주세요. (계산 기준 값)</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <p className="mb-2 text-xs text-neutral-500">
+          대바늘은 코수·단수·기준 크기를 모두 채우거나 모두 비워 주세요(게이지 계산 기준값).
+          코바늘은 10×10 게이지가 없을 수 있어요 — 그때는 비우고 실 소요량·상세 설명에 서술하세요.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <GaugeInput label="코수" value={form.gauge.stitches} onChange={(v) => setGauge("stitches", v)} />
           <GaugeInput label="단수" value={form.gauge.rows} onChange={(v) => setGauge("rows", v)} />
           <GaugeInput label="기준 너비(cm)" value={form.gauge.swatchWidthCm} onChange={(v) => setGauge("swatchWidthCm", v)} />
           <GaugeInput label="기준 높이(cm)" value={form.gauge.swatchHeightCm} onChange={(v) => setGauge("swatchHeightCm", v)} />
+        </div>
+      </Section>
+
+      <Section title="사용 바늘">
+        <p className="mb-2 text-xs text-neutral-500">게이지와 별도로 입력합니다. 게이지 계산의 바늘 추천 기준이 됩니다.</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <GaugeInput label="바늘(mm)" value={form.gauge.needleSizeMm} onChange={(v) => setGauge("needleSizeMm", v)} />
         </div>
       </Section>
 
       <Section title="사이즈 · 완성 실측" onAdd={() => set("sizes", [...form.sizes, emptySize()])}>
-        <p className="mb-2 text-xs text-neutral-500">사이즈명과 시작 콧수는 필수입니다. 실측은 선택이며 게이지 계산의 기준이 됩니다.</p>
+        <p className="mb-2 text-xs text-neutral-500">사이즈명만 필수입니다. 시작 콧수·완성 실측은 선택이며, 실측은 게이지 계산의 기준이 됩니다. (의류 상의·드레스는 가슴둘레 권장)</p>
         <div className="space-y-3">
           {form.sizes.map((row, i) => (
             <div key={i} className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
@@ -302,7 +315,7 @@ export function PatternForm({
                 <div className="sm:col-span-2">
                   <input placeholder="사이즈명 (예: M)" value={row.label} onChange={(e) => setSize(i, "label", e.target.value)} className={inputClass} />
                 </div>
-                <input placeholder="시작 콧수" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={inputClass} />
+                <input placeholder="시작 콧수 (선택)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={inputClass} />
                 {MEASURE_COLS.slice(0, 3).map((c) => (
                   <input key={c.key} placeholder={c.label} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={inputClass} />
                 ))}

@@ -27,7 +27,7 @@ export type GaugeBody = {
 
 export type SizeRow = {
   label: string;
-  castOnStitches: number;
+  castOnStitches?: number;
   measurements?: Record<string, number>;
 };
 
