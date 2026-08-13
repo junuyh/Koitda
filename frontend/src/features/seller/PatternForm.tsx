@@ -309,8 +309,8 @@ export function PatternForm({
           <Labeled label="난이도">
             <input value={form.difficulty} onChange={(e) => set("difficulty", e.target.value)} placeholder="초급·중급·고급" className={inputClass} />
           </Labeled>
-          <Labeled label="언어">
-            <input value={form.language} onChange={(e) => set("language", e.target.value)} className={inputClass} />
+          <Labeled label="언어 (여러 개는 쉼표로)">
+            <input value={form.language} onChange={(e) => set("language", e.target.value)} placeholder="예: 한국어, 영어" className={inputClass} />
           </Labeled>
         </div>
       </Section>
