@@ -24,7 +24,12 @@ export default function MyProjectsPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-400">My Studio</p>
           <h1 className="mt-1 text-4xl font-black tracking-tight">내 니팅로그</h1>
         </div>
-        <Link href="/projects/trash" className="text-sm text-neutral-500 hover:underline">휴지통</Link>
+        <Link href="/projects/trash" aria-label="휴지통" title="휴지통"
+          className="rounded-lg border-2 border-neutral-900 p-2 text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6M10 11v6M14 11v6" />
+          </svg>
+        </Link>
       </div>
 
       {isLoading ? (

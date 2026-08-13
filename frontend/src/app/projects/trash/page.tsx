@@ -17,11 +17,9 @@ export default function TrashPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">휴지통</h1>
-        <Link href="/projects" className="text-sm text-neutral-500 hover:underline">내 니팅로그</Link>
-      </div>
-      <p className="mb-4 text-xs text-neutral-500">삭제한 니팅로그는 90일 뒤 완전 삭제됩니다.</p>
+      <Link href="/projects" className="text-sm font-bold text-neutral-500 hover:underline">← 니팅로그</Link>
+      <h1 className="mt-1 text-3xl font-black tracking-tight">휴지통</h1>
+      <p className="mb-4 mt-1 text-xs text-neutral-500">삭제한 니팅로그는 90일 뒤 완전 삭제됩니다.</p>
 
       {isLoading ? (
         <p className="py-16 text-center text-sm text-neutral-400">불러오는 중…</p>

@@ -120,8 +120,43 @@ function ProjectRow({ project }: { project: ProjectListItem }) {
         {project.visibility !== "PUBLIC" && <span className="shrink-0 text-xs text-neutral-400">비공개</span>}
       </div>
 
-      {open && <LogSublist projectId={project.id} />}
+      {open && (
+        <div className="mt-3 border-l-2 border-dashed border-neutral-300 pl-4 dark:border-neutral-700">
+          <ProjectSummary projectId={project.id} />
+          <LogSublist projectId={project.id} />
+        </div>
+      )}
     </li>
+  );
+}
+
+const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘", MIXED: "혼합" };
+
+/** 코잇기 펼침 시 — 대표 사진·실·바늘·게이지 요약. */
+function ProjectSummary({ projectId }: { projectId: number }) {
+  const { data: p } = useQuery({ queryKey: ["project", projectId], queryFn: () => projectApi.get(projectId), retry: false });
+  if (!p) return null;
+  const cover = p.images?.find((im) => im.url)?.url ?? null;
+  const line = (label: string, val: string | null) =>
+    val ? <div className="flex gap-2"><span className="w-10 shrink-0 text-neutral-400">{label}</span><span className="min-w-0">{val}</span></div> : null;
+  const yarn = p.yarns.map((y) => [y.brand, y.yarnName, y.amount && `${y.amount}${y.unit ?? ""}`].filter(Boolean).join(" ")).filter(Boolean).join(", ") || null;
+  const needle = p.needles.map((n) => [n.needleType ? (CRAFT_LABEL[n.needleType] ?? n.needleType) : null, n.sizeMm != null ? `${n.sizeMm}mm` : null].filter(Boolean).join(" ")).filter(Boolean).join(", ") || null;
+  const gauge = p.gauges.map((g) => `${g.stitches}코×${g.rows}단`).join(", ") || null;
+
+  if (!cover && !yarn && !needle && !gauge) return null;
+  return (
+    <div className="mb-3 flex gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+      {cover && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={cover} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+          className="h-20 w-20 shrink-0 rounded-lg border border-neutral-300 object-cover dark:border-neutral-700" />
+      )}
+      <div className="min-w-0 flex-1 space-y-0.5 text-xs">
+        {line("실", yarn)}
+        {line("바늘", needle)}
+        {line("게이지", gauge)}
+      </div>
+    </div>
   );
 }
 
@@ -131,11 +166,11 @@ function LogSublist({ projectId }: { projectId: number }) {
     queryFn: () => projectApi.logs(projectId),
   });
 
-  if (isLoading) return <p className="mt-2 pl-8 text-xs text-neutral-400">불러오는 중…</p>;
-  if (!logs || logs.length === 0) return <p className="mt-2 pl-8 text-xs text-neutral-400">오늘의 로그가 없습니다.</p>;
+  if (isLoading) return <p className="text-xs text-neutral-400">불러오는 중…</p>;
+  if (!logs || logs.length === 0) return <p className="text-xs text-neutral-400">오늘의 로그가 없습니다.</p>;
 
   return (
-    <ul className="mt-2 space-y-1.5 border-l-2 border-dashed border-neutral-300 pl-4 dark:border-neutral-700">
+    <ul className="space-y-1.5">
       {logs.map((l) => (
         <li key={l.id}>
           <Link href={`/projects/${projectId}`} className="flex items-center gap-2 text-sm hover:underline">

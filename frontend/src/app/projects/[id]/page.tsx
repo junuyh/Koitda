@@ -266,21 +266,46 @@ export default function ProjectDetailPage() {
           </Section>
         )}
 
-        {/* 재료 */}
-        {p.yarns.length > 0 && (
-          <Section title="실">
-            <ul className="space-y-1 text-sm">
-              {p.yarns.map((y, i) => <li key={i}>{[y.brand, y.yarnName, y.color, y.amount].filter(Boolean).join(" · ") || "-"}</li>)}
-            </ul>
-          </Section>
-        )}
-        {p.gauges.length > 0 && (
-          <Section title="내 게이지">
-            <ul className="space-y-1 text-sm">
-              {p.gauges.map((g, i) => <li key={i}>{g.stitches}코 × {g.rows}단{g.needleSizeMm ? ` · ${g.needleSizeMm}mm` : ""}</li>)}
-            </ul>
-          </Section>
-        )}
+        {/* 내 니팅 정보 — 내가 입력한 실·바늘·게이지 한 블록 */}
+        <Section title="내 니팅 정보">
+          <dl className="space-y-3 text-sm">
+            <div>
+              <dt className="mb-1 text-xs font-bold text-neutral-400">🧶 실</dt>
+              <dd>
+                {p.yarns.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {p.yarns.map((y, i) => <li key={i}>{[y.brand, y.yarnName, y.color, y.amount && `${y.amount}${y.unit ?? ""}`].filter(Boolean).join(" · ") || "-"}</li>)}
+                  </ul>
+                ) : <span className="text-neutral-400">입력 안 함</span>}
+              </dd>
+            </div>
+            <div>
+              <dt className="mb-1 text-xs font-bold text-neutral-400">🪡 바늘</dt>
+              <dd>
+                {p.needles.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {p.needles.map((n, i) => (
+                      <li key={i}>
+                        {[n.needleType ? (CRAFT_LABEL[n.needleType] ?? n.needleType) : null, n.sizeMm != null ? `${n.sizeMm}mm` : null, n.lengthCm != null ? `${n.lengthCm}cm` : null]
+                          .filter(Boolean).join(" · ") || "-"}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <span className="text-neutral-400">입력 안 함</span>}
+              </dd>
+            </div>
+            <div>
+              <dt className="mb-1 text-xs font-bold text-neutral-400">📏 게이지</dt>
+              <dd>
+                {p.gauges.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {p.gauges.map((g, i) => <li key={i}>{g.stitches}코 × {g.rows}단{g.needleSizeMm ? ` · ${g.needleSizeMm}mm` : ""}</li>)}
+                  </ul>
+                ) : <span className="text-neutral-400">입력 안 함</span>}
+              </dd>
+            </div>
+          </dl>
+        </Section>
 
         {/* 게이지 — 적용한 내 게이지(굵게) + 계산 결과 전체 */}
         {p.patternType !== "EXTERNAL" && (

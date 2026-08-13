@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { authApi } from "@/features/auth/api";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; role?: "SELLER" | "ADMIN" };
@@ -28,11 +29,16 @@ const NAV: NavItem[] = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const [collapsed, setCollapsed] = useState(false); // 좌측 사이드바 접기
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: authApi.me });
   const logout = useMutation({
     mutationFn: authApi.logout,
-    onSuccess: () => queryClient.setQueryData(["me"], null),
+    onSuccess: () => {
+      queryClient.setQueryData(["me"], null);
+      router.push("/"); // 로그아웃 시 무조건 메인으로
+    },
   });
 
   const roles: string[] = me?.roles ?? [];
@@ -59,8 +65,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-full w-full">
-      {/* 좌측 사이드바 (데스크톱) */}
-      {!authPage && (
+      {/* 좌측 사이드바 (데스크톱) — 접기 가능 */}
+      {!authPage && !collapsed && (
         <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-2 border-neutral-900 bg-white px-3 py-5 md:flex dark:border-neutral-100 dark:bg-neutral-950">
           <Link href="/" className="mb-6 flex items-center gap-2 px-2 text-2xl font-black tracking-tight">
             <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 bg-amber-300 text-base text-neutral-900 dark:border-neutral-100">코</span>
@@ -79,6 +85,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col bg-neutral-50 dark:bg-neutral-900/40">
         {/* 상단바 */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b-2 border-neutral-900 bg-white/85 px-4 backdrop-blur dark:border-neutral-100 dark:bg-neutral-950/85">
+          {/* 사이드바 접기/펼치기(데스크톱) */}
+          {!authPage && (
+            <button type="button" onClick={() => setCollapsed((v) => !v)} aria-label="메뉴 접기/펼치기"
+              className="hidden rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 md:block dark:text-neutral-300 dark:hover:bg-neutral-800">
+              <Icon d="M3 6h18M3 12h18M3 18h18" />
+            </button>
+          )}
+          {/* 접었을 때 로고 노출 */}
+          {collapsed && <Link href="/" className="hidden text-lg font-black tracking-tight md:block">코잇다</Link>}
           {/* 모바일 로고 */}
           <Link href="/" className="text-lg font-black tracking-tight md:hidden">코잇다</Link>
 
