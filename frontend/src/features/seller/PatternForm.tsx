@@ -194,33 +194,29 @@ export function PatternForm({
       return null;
     }
 
-    // 게이지: 코·단·기준크기(4개)는 모두 채우거나 모두 비우거나. 코바늘 등은 비우고 자유 서술만.
+    // 게이지: 코·단·기준크기·게이지 바늘(5개)은 모두 채우거나 모두 비우거나. 코바늘 등은 비우고 자유 서술만.
     const g = form.gauge;
-    const numVals = [g.stitches, g.rows, g.swatchWidthCm, g.swatchHeightCm];
+    const numVals = [g.stitches, g.rows, g.swatchWidthCm, g.swatchHeightCm, g.needleSizeMm];
     const gaugeFilled = numVals.filter((v) => v.trim() !== "").length;
     let gauge: SavePatternDraftBody["gauge"];
-    if (gaugeFilled > 0 && gaugeFilled < 4) {
-      setError("게이지 숫자는 코수·단수·기준 너비·기준 높이를 모두 입력하거나 모두 비워 주세요. (코바늘은 비우고 자유 서술)");
+    if (gaugeFilled > 0 && gaugeFilled < 5) {
+      setError("게이지는 코수·단수·기준 너비·기준 높이·게이지 바늘(mm)을 모두 입력하거나 모두 비워 주세요. (코바늘은 비우고 자유 서술)");
       return null;
     }
     const gaugeText = g.text.trim();
-    if (gaugeFilled === 4) {
-      if (needles.length === 0) {
-        setError("게이지 계산을 위해 사용 바늘을 1개 이상 입력하세요.");
-        return null;
-      }
+    if (gaugeFilled === 5) {
       const nums = {
         stitches: Number(g.stitches),
         rows: Number(g.rows),
         swatchWidthCm: Number(g.swatchWidthCm),
         swatchHeightCm: Number(g.swatchHeightCm),
+        needleSizeMm: Number(g.needleSizeMm),
       };
       if (Object.values(nums).some((n) => !Number.isFinite(n) || n <= 0)) {
         setError("게이지 값은 모두 0보다 큰 숫자여야 합니다.");
         return null;
       }
-      // 게이지 계산 기준 바늘 = 첫 번째 바늘 mm
-      gauge = { ...nums, needleSizeMm: needles[0].sizeMm, text: gaugeText || undefined };
+      gauge = { ...nums, text: gaugeText || undefined };
     } else if (gaugeText) {
       gauge = { text: gaugeText }; // 자유 텍스트만
     }
@@ -338,14 +334,15 @@ export function PatternForm({
 
       <Section title="게이지">
         <p className="mb-2 text-xs text-neutral-500">
-          대바늘은 코수·단수·기준 크기를 모두 채우거나 모두 비워 주세요(게이지 계산 기준값).
-          코바늘은 10×10 게이지가 없을 수 있어요 — 그때는 비우고 실 소요량·상세 설명에 서술하세요.
+          대바늘은 코수·단수·기준 크기·<b>게이지를 낸 바늘(mm)</b>을 모두 채우거나 모두 비워 주세요(게이지 계산 기준값).
+          코바늘은 10×10 게이지가 없을 수 있어요 — 그때는 비우고 아래 자유 서술에 적으세요.
         </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <GaugeInput label="코수" value={form.gauge.stitches} onChange={(v) => setGauge("stitches", v)} />
           <GaugeInput label="단수" value={form.gauge.rows} onChange={(v) => setGauge("rows", v)} />
           <GaugeInput label="기준 너비(cm)" value={form.gauge.swatchWidthCm} onChange={(v) => setGauge("swatchWidthCm", v)} />
           <GaugeInput label="기준 높이(cm)" value={form.gauge.swatchHeightCm} onChange={(v) => setGauge("swatchHeightCm", v)} />
+          <GaugeInput label="게이지 바늘(mm)" value={form.gauge.needleSizeMm} onChange={(v) => setGauge("needleSizeMm", v)} />
         </div>
         <label className="mt-3 block">
           <span className="mb-1 block text-[11px] text-neutral-500">게이지 자유 서술 (코바늘 등 — 예: 1인치(2.5cm)=한길긴뜨기 10코)</span>
@@ -399,8 +396,10 @@ export function PatternForm({
       </Section>
 
       <Section title="상세">
-        <Labeled label="실 소요량">
-          <input value={form.yarnRequirement} onChange={(e) => set("yarnRequirement", e.target.value)} placeholder="메리노 400g 등" className={inputClass} />
+        <Labeled label="실 소요량 (여러 줄 가능)">
+          <textarea value={form.yarnRequirement} onChange={(e) => set("yarnRequirement", e.target.value)} rows={4}
+            placeholder={"실·색상·소요량을 자유롭게. 예)\n낙양모사 바당(932컬러) 20g\n스카프 하나 당 약 35-45g"}
+            className={`${inputClass} resize-y`} />
         </Labeled>
         <Labeled label="참고 동영상 URL">
           <input value={form.referenceVideoUrl} onChange={(e) => set("referenceVideoUrl", e.target.value)} className={inputClass} />

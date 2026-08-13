@@ -219,7 +219,7 @@ export default function PatternDetailPage() {
       </Section>
 
       <Section title="실 소요량">
-        {p.yarnRequirement ? <p className="text-sm">{p.yarnRequirement}</p> : <Empty />}
+        {p.yarnRequirement ? <p className="whitespace-pre-line text-sm">{p.yarnRequirement}</p> : <Empty />}
       </Section>
 
       <Section title="상세 설명">
