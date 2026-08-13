@@ -26,9 +26,9 @@ const MEASURE_COLS: Array<{ key: string; label: string }> = [
 ];
 
 type SizeRowState = { label: string; castOnStitches: string } & Record<string, string>;
-type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string };
+type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string; text: string };
 
-const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "" };
+const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "", text: "" };
 const emptySize = (): SizeRowState => ({ label: "", castOnStitches: "" });
 
 export const inputClass =
@@ -59,6 +59,7 @@ function fromPreview(p: SellerPatternPreview): FormState {
           swatchWidthCm: numStr(p.gaugeInfo.swatchWidthCm),
           swatchHeightCm: numStr(p.gaugeInfo.swatchHeightCm),
           needleSizeMm: numStr(p.gaugeInfo.needleSizeMm),
+          text: (p.gaugeInfo as { text?: string }).text ?? "",
         }
       : { ...emptyGauge },
     sizes:
@@ -133,7 +134,26 @@ export function PatternForm({
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories } = useQuery({ queryKey: ["pattern-categories"], queryFn: patternApi.categories });
-  const topCategories = useMemo(() => (categories ?? []).filter((c) => c.parentId == null), [categories]);
+  // 카테고리 트리를 들여쓰기된 평면 옵션으로 펼친다(대분류 → 소분류).
+  const categoryOptions = useMemo(() => {
+    const all = categories ?? [];
+    const byParent = new Map<number | null, typeof all>();
+    for (const c of all) {
+      const k = c.parentId ?? null;
+      if (!byParent.has(k)) byParent.set(k, []);
+      byParent.get(k)!.push(c);
+    }
+    for (const arr of byParent.values()) arr.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const out: Array<{ id: number; label: string }> = [];
+    const walk = (parent: number | null, depth: number) => {
+      for (const c of byParent.get(parent) ?? []) {
+        out.push({ id: c.id, label: `${"　".repeat(depth)}${depth > 0 ? "└ " : ""}${c.name}` });
+        walk(c.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    return out;
+  }, [categories]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -148,27 +168,31 @@ export function PatternForm({
   function build(): SavePatternDraftBody | null {
     setError(null);
 
-    // 게이지: 5개 모두 채우거나 모두 비우거나 (부분 입력은 저장 시 422 → 사전 차단)
+    // 게이지: 숫자 5개는 모두 채우거나 모두 비우거나. 코바늘 등은 숫자 없이 자유 텍스트만 가능(계산 비활성).
     const g = form.gauge;
     const gaugeVals = [g.stitches, g.rows, g.swatchWidthCm, g.swatchHeightCm, g.needleSizeMm];
     const gaugeFilled = gaugeVals.filter((v) => v.trim() !== "").length;
     let gauge: SavePatternDraftBody["gauge"];
     if (gaugeFilled > 0 && gaugeFilled < 5) {
-      setError("게이지는 코수·단수·기준 너비·기준 높이·바늘 호수를 모두 입력하거나 모두 비워 주세요.");
+      setError("게이지 숫자는 코수·단수·기준 너비·기준 높이·바늘 호수를 모두 입력하거나 모두 비워 주세요. (코바늘은 비우고 자유 서술만)");
       return null;
     }
+    const gaugeText = g.text.trim();
     if (gaugeFilled === 5) {
-      gauge = {
+      const nums = {
         stitches: Number(g.stitches),
         rows: Number(g.rows),
         swatchWidthCm: Number(g.swatchWidthCm),
         swatchHeightCm: Number(g.swatchHeightCm),
         needleSizeMm: Number(g.needleSizeMm),
       };
-      if (Object.values(gauge).some((n) => !Number.isFinite(n) || n <= 0)) {
+      if (Object.values(nums).some((n) => !Number.isFinite(n) || n <= 0)) {
         setError("게이지 값은 모두 0보다 큰 숫자여야 합니다.");
         return null;
       }
+      gauge = { ...nums, text: gaugeText || undefined };
+    } else if (gaugeText) {
+      gauge = { text: gaugeText }; // 자유 텍스트만
     }
 
     // 사이즈: 사이즈명이 있는 행만 '의도된' 행으로 본다. 시작 콧수는 선택(입력 시 양의 정수).
@@ -243,8 +267,8 @@ export function PatternForm({
           <Labeled label="카테고리">
             <select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={inputClass}>
               <option value="">선택 안 함</option>
-              {topCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {categoryOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
           </Labeled>
@@ -297,6 +321,10 @@ export function PatternForm({
           <GaugeInput label="기준 너비(cm)" value={form.gauge.swatchWidthCm} onChange={(v) => setGauge("swatchWidthCm", v)} />
           <GaugeInput label="기준 높이(cm)" value={form.gauge.swatchHeightCm} onChange={(v) => setGauge("swatchHeightCm", v)} />
         </div>
+        <label className="mt-3 block">
+          <span className="mb-1 block text-[11px] text-neutral-500">게이지 자유 서술 (코바늘 등 — 예: 1인치(2.5cm)=한길긴뜨기 10코)</span>
+          <input value={form.gauge.text} onChange={(e) => setGauge("text", e.target.value)} className={inputClass} />
+        </label>
       </Section>
 
       <Section title="사용 바늘">

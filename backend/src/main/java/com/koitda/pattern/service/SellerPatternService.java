@@ -253,10 +253,16 @@ public class SellerPatternService {
 	}
 
 	private void validateGauge(GaugeInput g) {
+		boolean anyNumber = g.stitches() != null || g.rows() != null || g.swatchWidthCm() != null
+				|| g.swatchHeightCm() != null || g.needleSizeMm() != null;
+		// 숫자를 하나도 안 넣었으면 자유 텍스트(코바늘 등)로 보고 통과 — 계산은 비활성된다.
+		if (!anyNumber) {
+			return;
+		}
 		if (!positive(g.stitches()) || !positive(g.rows())
 				|| !positive(g.swatchWidthCm()) || !positive(g.swatchHeightCm()) || !positive(g.needleSizeMm())) {
 			throw new ApiException(ErrorCode.PATTERN_SIZE_SCHEMA_INVALID,
-					"게이지는 코 수·단 수·기준 크기·바늘 호수를 모두 양수로 입력해야 합니다.");
+					"게이지 숫자는 코 수·단 수·기준 크기·바늘 호수를 모두 양수로 입력해야 합니다. (코바늘은 게이지를 비우고 아래 설명에 서술)");
 		}
 	}
 
@@ -268,9 +274,10 @@ public class SellerPatternService {
 			if (s == null || s.label() == null || s.label().isBlank()) {
 				throw new ApiException(ErrorCode.PATTERN_SIZE_SCHEMA_INVALID, "사이즈명은 필수입니다.");
 			}
-			if (!positive(s.castOnStitches())) {
+			// 시작 콧수는 선택. 입력했다면 양의 정수여야 한다.
+			if (s.castOnStitches() != null && s.castOnStitches() <= 0) {
 				throw new ApiException(ErrorCode.PATTERN_SIZE_SCHEMA_INVALID,
-						"'" + s.label() + "' 사이즈의 시작 콧수는 양의 정수여야 합니다.");
+						"'" + s.label() + "' 사이즈의 시작 콧수는 양의 정수여야 합니다(선택 항목).");
 			}
 			if (s.measurements() != null) {
 				for (Double v : s.measurements().values()) {

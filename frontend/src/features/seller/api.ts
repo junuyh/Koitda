@@ -18,11 +18,12 @@ export const sellerApi = {
 // ---------------------------------------------------------------- 도안 등록(SELLER-002·003)
 
 export type GaugeBody = {
-  stitches: number;
-  rows: number;
-  swatchWidthCm: number;
-  swatchHeightCm: number;
-  needleSizeMm: number;
+  stitches?: number;
+  rows?: number;
+  swatchWidthCm?: number;
+  swatchHeightCm?: number;
+  needleSizeMm?: number;
+  text?: string;
 };
 
 export type SizeRow = {

@@ -44,13 +44,17 @@ public final class SellerPatternDtos {
 			Long pdfFileId) {
 	}
 
-	/** 게이지(PATTERN-011): 코 수·단 수·기준 크기·바늘 호수. 모두 양수여야 한다. */
+	/**
+	 * 게이지(PATTERN-011). 대바늘은 코·단·기준크기·바늘을 채우면 게이지 계산에 쓰인다.
+	 * 코바늘 등은 계산이 어려우므로 text 로 자유 서술만 남길 수 있다(그 경우 계산은 비활성).
+	 */
 	public record GaugeInput(
 			Integer stitches,
 			Integer rows,
 			Double swatchWidthCm,
 			Double swatchHeightCm,
-			Double needleSizeMm) {
+			Double needleSizeMm,
+			String text) {
 	}
 
 	/** 사이즈 한 행(PATTERN-011): 사이즈명(label)·시작 콧수(castOnStitches)는 필수, 완성 실측은 항목별. */
