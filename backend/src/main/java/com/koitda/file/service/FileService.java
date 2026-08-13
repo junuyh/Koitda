@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileService {
 
 	private static final long MAX_IMAGE_BYTES = 15L * 1024 * 1024;
-	private static final long MAX_PDF_BYTES = 30L * 1024 * 1024;
+	private static final long MAX_PDF_BYTES = 100L * 1024 * 1024;
 	private static final Map<String, String> IMAGE_EXT = Map.of(
 			"image/jpeg", ".jpg", "image/png", ".png", "image/webp", ".webp", "image/gif", ".gif");
 	private static final Set<String> IMAGE_USAGE = Set.of("PATTERN_IMAGE", "PROJECT_IMAGE", "REVIEW_IMAGE", "PROFILE");
@@ -45,7 +45,7 @@ public class FileService {
 		String ext;
 		if (PDF_USAGE.contains(usageType)) {
 			if (file.getSize() > MAX_PDF_BYTES) {
-				throw new ApiException(ErrorCode.VALIDATION_ERROR, "PDF는 30MB 이하만 업로드할 수 있습니다.");
+				throw new ApiException(ErrorCode.VALIDATION_ERROR, "PDF는 100MB 이하만 업로드할 수 있습니다.");
 			}
 			if (!"application/pdf".equals(contentType)) {
 				throw new ApiException(ErrorCode.UNSUPPORTED_FILE_TYPE, "PDF 파일만 업로드할 수 있습니다.");

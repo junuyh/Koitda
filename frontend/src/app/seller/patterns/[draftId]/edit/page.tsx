@@ -61,18 +61,19 @@ export default function EditPatternPage() {
       )}
 
       {saved && (
-        <div className="mt-4 rounded-md border border-neutral-200 p-3 text-sm dark:border-neutral-800">
-          <p className="font-medium">임시저장되었습니다.</p>
+        <div className="mt-4 rounded-2xl border-2 border-neutral-900 bg-amber-50 p-4 dark:border-neutral-100 dark:bg-amber-950/20">
+          <p className="font-black">✅ 임시저장되었습니다.</p>
           {saved.missingFields.length > 0 ? (
-            <p className="mt-1 text-neutral-500">
-              제출 전 보완: {saved.missingFields.map((f) => MISSING_LABEL[f] ?? f).join(", ")}
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+              제출 전 보완이 필요해요: {saved.missingFields.map((f) => MISSING_LABEL[f] ?? f).join(", ")}
             </p>
           ) : (
-            <p className="mt-1 text-neutral-500">필수 항목이 모두 채워졌습니다. 미리보기 후 제출하세요.</p>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">필수 항목이 모두 채워졌어요. 미리보기에서 확인하고 심사에 제출하세요.</p>
           )}
-          <div className="mt-2 flex gap-3">
-            <Link href={`/seller/patterns/${draftId}/preview`} className="text-xs underline">미리보기 · 제출 →</Link>
-          </div>
+          <Link href={`/seller/patterns/${draftId}/preview`}
+            className="mt-3 block w-full rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-3 text-center text-sm font-black text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
+            미리보기 · 심사 제출하기 →
+          </Link>
         </div>
       )}
 
