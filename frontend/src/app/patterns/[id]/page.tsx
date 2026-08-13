@@ -13,6 +13,12 @@ import type { JSONContent } from "@tiptap/react";
 import { ApiError } from "@/lib/api";
 
 const CRAFT_LABEL: Record<string, string> = { KNIT: "대바늘", CROCHET: "코바늘" };
+
+/** YouTube URL → 임베드 URL. 유튜브가 아니면 null(링크로 폴백). */
+function youtubeEmbed(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+}
 const MEASURE_LABEL: Record<string, string> = {
   chestCm: "가슴둘레",
   lengthCm: "총장",
@@ -125,9 +131,11 @@ export default function PatternDetailPage() {
               }}
               disabled={wish.isPending}
               aria-pressed={p.wished}
-              className="rounded-full border-2 border-neutral-900 px-4 py-2 text-sm font-bold dark:border-neutral-100"
+              aria-label={p.wished ? "위시 해제" : "위시 등록"}
+              className="flex items-center gap-1.5 rounded-full border-2 border-neutral-900 px-4 py-2 text-sm font-bold dark:border-neutral-100"
             >
-              {p.wished ? "♥ 위시 담김" : "♡ 위시 담기"}
+              <span className={p.wished ? "text-red-500" : "text-neutral-400"}>{p.wished ? "♥" : "♡"}</span>
+              위시
             </button>
             <Link
               href={me ? `/projects/new?sellingPatternId=${p.id}` : "/login"}
@@ -149,10 +157,12 @@ export default function PatternDetailPage() {
               <button
                 type="button"
                 onClick={() => purchase.mutate()}
-                disabled={purchase.isPending || !purchasability?.canPurchase}
+                disabled={purchase.isPending || (purchasability?.canPurchase === false && p.salePrice !== 0)}
                 className="rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:shadow-none dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
               >
-                {purchase.isPending ? "구매 중…" : `구매하기${p.salePrice != null ? ` · ${p.salePrice.toLocaleString()}원` : ""}`}
+                {purchase.isPending ? "처리 중…"
+                  : p.salePrice === 0 ? "무료로 받기"
+                  : `구매하기${p.salePrice != null ? ` · ${p.salePrice.toLocaleString()}원` : ""}`}
               </button>
             )}
           </div>
@@ -215,9 +225,15 @@ export default function PatternDetailPage() {
 
       {p.referenceVideoUrl && (
         <Section title="참고 영상">
-          <a href={p.referenceVideoUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-            영상 보기
-          </a>
+          {youtubeEmbed(p.referenceVideoUrl) ? (
+            <div className="relative w-full overflow-hidden rounded-xl border-2 border-neutral-900 pb-[56.25%] dark:border-neutral-100">
+              <iframe src={youtubeEmbed(p.referenceVideoUrl) as string} title="참고 영상" allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                className="absolute inset-0 h-full w-full" />
+            </div>
+          ) : (
+            <a href={p.referenceVideoUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">영상 보기</a>
+          )}
         </Section>
       )}
       </div>

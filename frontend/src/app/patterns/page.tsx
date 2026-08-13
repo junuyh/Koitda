@@ -155,13 +155,26 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
           <p className="line-clamp-1 text-xs text-neutral-500">
             {pattern.designerName ?? pattern.sellerBrand ?? "원작자 미상"}
           </p>
-          <div className="mt-1.5 flex items-center justify-between">
-            <span className="text-base font-black">
-              {pattern.salePrice != null ? `${pattern.salePrice.toLocaleString()}원` : "-"}
-            </span>
-            {pattern.difficulty && (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${accent.soft}`}>{pattern.difficulty}</span>
-            )}
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-1.5">
+              {pattern.salePrice === 0 ? (
+                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">무료</span>
+              ) : pattern.salePrice != null ? (
+                <>
+                  {pattern.regularPrice != null && pattern.regularPrice > pattern.salePrice && (
+                    <span className="text-xs text-neutral-400 line-through">{pattern.regularPrice.toLocaleString()}</span>
+                  )}
+                  <span className="text-base font-black">{pattern.salePrice.toLocaleString()}원</span>
+                </>
+              ) : (
+                <span className="text-base font-black">-</span>
+              )}
+            </div>
+            {pattern.regularPrice != null && pattern.salePrice != null && pattern.regularPrice > pattern.salePrice ? (
+              <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">할인</span>
+            ) : pattern.difficulty ? (
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${accent.soft}`}>{pattern.difficulty}</span>
+            ) : null}
           </div>
         </div>
       </Link>
@@ -173,9 +186,9 @@ function PatternCard({ pattern, loggedIn }: { pattern: PatternListItem; loggedIn
         disabled={wish.isPending}
         aria-label={pattern.wished ? "위시 해제" : "위시 등록"}
         aria-pressed={pattern.wished}
-        className="absolute right-2 top-2 rounded-full border border-neutral-900 bg-white px-2 py-0.5 text-sm font-semibold dark:border-neutral-100 dark:bg-neutral-950"
+        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 bg-white text-base dark:border-neutral-100 dark:bg-neutral-950"
       >
-        {pattern.wished ? "♥" : "♡"} {pattern.wishCount}
+        <span className={pattern.wished ? "text-red-500" : "text-neutral-400"}>{pattern.wished ? "♥" : "♡"}</span>
       </button>
     </li>
   );

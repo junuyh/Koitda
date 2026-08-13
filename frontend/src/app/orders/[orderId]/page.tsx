@@ -46,7 +46,7 @@ export default function OrderDetailPage() {
             <Link href={`/patterns/${first.patternId}/reviews/new`}
               className="rounded-full border-2 border-neutral-900 py-2 text-center text-sm font-bold dark:border-neutral-100">리뷰 작성</Link>
             <Link href={`/library/${first.patternId}`}
-              className="rounded-full border-2 border-neutral-900 bg-neutral-900 py-2 text-center text-sm font-bold text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">다운로드</Link>
+              className="rounded-full border-2 border-neutral-900 bg-emerald-300 py-2 text-center text-sm font-bold text-emerald-950 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100">다운로드</Link>
           </div>
         )}
       </section>
