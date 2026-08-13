@@ -44,8 +44,21 @@ export type CreateReviewBody = {
 
 export type ReviewDeleted = { revokedPoint: number; pointBalance: number; revokeFailReason: string | null };
 
+export type MyReview = {
+  id: number;
+  patternId: number;
+  patternTitle: string;
+  title: string | null;
+  contentText: string | null;
+  knittingStatus: string | null;
+  visibility: string;
+  likeCount: number;
+  createdAt: string;
+};
+
 export const reviewApi = {
   list: (patternId: number) => apiFetch<ReviewListResponse>(`/patterns/${patternId}/reviews`),
+  mine: () => apiFetch<MyReview[]>("/users/me/reviews"),
   loadableLogs: (patternId: number) => apiFetch<LoadableLog[]>(`/patterns/${patternId}/reviews/loadable-logs`),
   create: (patternId: number, body: CreateReviewBody) =>
     apiFetch<ReviewCreated>(`/patterns/${patternId}/reviews`, { method: "POST", body }),

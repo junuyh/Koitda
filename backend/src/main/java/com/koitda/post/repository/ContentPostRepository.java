@@ -16,6 +16,17 @@ public interface ContentPostRepository extends JpaRepository<ContentPost, Long> 
 	Optional<ContentPost> findFirstByProjectIdAndPostTypeAndDeletedAtIsNullOrderByLogDateDescCreatedAtDesc(
 			Long projectId, PostType postType);
 
+	/** 마이페이지 내 게시글 — 내가 쓴 공개 오늘의 로그. 최신순. */
+	@Query("""
+			select p.id as id, p.displayTitle as displayTitle, p.projectId as projectId,
+			       p.knittingStatus as knittingStatus, p.logDate as logDate, p.createdAt as createdAt
+			from ContentPost p
+			where p.userId = :userId and p.postType = com.koitda.post.domain.PostType.PROJECT_LOG
+			  and p.visibility = com.koitda.project.domain.ProjectVisibility.PUBLIC and p.deletedAt is null
+			order by p.createdAt desc
+			""")
+	List<MyPostView> findMyPublicPosts(@Param("userId") Long userId);
+
 	/**
 	 * 리뷰 불러오기 후보(REVIEW-005) — 해당 도안에 연결된 본인 니팅로그의 오늘의 로그.
 	 * 비공개 로그도 불러올 수 있으므로 visibility 는 조건에 넣지 않는다.

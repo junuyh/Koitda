@@ -79,6 +79,11 @@ public class SocialController {
 		return socialService.listFollowing(principal.getUserId());
 	}
 
+	@GetMapping("/users/me/followers")
+	public List<FollowingItem> followers(@AuthenticationPrincipal CustomUserDetails principal) {
+		return socialService.listFollowers(principal.getUserId());
+	}
+
 	/** 신고(REPORT-001~003). */
 	@PostMapping("/reports")
 	@ResponseStatus(HttpStatus.CREATED)

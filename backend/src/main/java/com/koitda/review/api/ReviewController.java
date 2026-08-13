@@ -38,6 +38,13 @@ public class ReviewController {
 		return reviewService.list(patternId, principal != null ? principal.getUserId() : null);
 	}
 
+	/** 내가 쓴 리뷰 목록(나의 뜨개방). 로그인 필요. */
+	@GetMapping("/api/v1/users/me/reviews")
+	public List<com.koitda.review.dto.ReviewDtos.MyReviewItem> myReviews(
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return reviewService.myReviews(principal.getUserId());
+	}
+
 	/** 불러오기 후보 로그(REVIEW-005). 로그인 필요. */
 	@GetMapping("/api/v1/patterns/{patternId}/reviews/loadable-logs")
 	public List<LoadableLogItem> loadableLogs(@PathVariable Long patternId,

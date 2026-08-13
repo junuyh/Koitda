@@ -38,4 +38,15 @@ public interface PatternReviewRepository extends JpaRepository<PatternReview, Lo
 	@Query("update com.koitda.pattern.domain.SellingPattern p set p.reviewCount = p.reviewCount + :delta "
 			+ "where p.id = :patternId and p.reviewCount + :delta >= 0")
 	int addPatternReviewCount(@Param("patternId") Long patternId, @Param("delta") int delta);
+
+	/** 내가 쓴 리뷰 목록(나의 뜨개방). 대상 도안명과 함께 최신순. */
+	@Query("""
+			select r.id as id, r.patternId as patternId, sp.title as patternTitle,
+			       r.title as title, r.contentText as contentText, r.knittingStatus as knittingStatus,
+			       r.visibility as visibility, r.likeCount as likeCount, r.createdAt as createdAt
+			from PatternReview r, com.koitda.pattern.domain.SellingPattern sp
+			where sp.id = r.patternId and r.userId = :userId and r.deletedAt is null
+			order by r.createdAt desc
+			""")
+	List<MyReviewView> findMyReviews(@Param("userId") Long userId);
 }

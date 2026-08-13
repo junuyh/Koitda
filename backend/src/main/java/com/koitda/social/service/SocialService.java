@@ -133,6 +133,16 @@ public class SocialService {
 				f.getCreatedAt())).toList();
 	}
 
+	/** 나를 팔로우하는 사람 목록. */
+	@Transactional(readOnly = true)
+	public List<FollowingItem> listFollowers(Long userId) {
+		List<Follow> follows = followRepository.findByFollowingId(userId);
+		Map<Long, String> nicknames = nicknamesOf(follows.stream().map(Follow::getFollowerId).toList());
+		return follows.stream().map(f -> new FollowingItem(
+				f.getFollowerId(), nicknames.getOrDefault(f.getFollowerId(), "탈퇴한 사용자"),
+				f.getCreatedAt())).toList();
+	}
+
 	// ---------------------------------------------------------------- 신고(REPORT-001~003)
 
 	@Transactional

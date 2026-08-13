@@ -78,6 +78,24 @@ public final class ReviewDtos {
 	}
 
 	/** 삭제 결과 — 포인트 회수 정보 포함(POINT-003). */
+	/** 내 리뷰 목록 항목(나의 뜨개방). */
+	public record MyReviewItem(
+			Long id,
+			Long patternId,
+			String patternTitle,
+			String title,
+			String contentText,
+			String knittingStatus,
+			String visibility,
+			int likeCount,
+			java.time.OffsetDateTime createdAt) {
+
+		public static MyReviewItem from(com.koitda.review.repository.MyReviewView v) {
+			return new MyReviewItem(v.getId(), v.getPatternId(), v.getPatternTitle(), v.getTitle(),
+					v.getContentText(), v.getKnittingStatus(), v.getVisibility(), v.getLikeCount(), v.getCreatedAt());
+		}
+	}
+
 	public record ReviewDeletedResponse(
 			int revokedPoint,
 			int pointBalance,

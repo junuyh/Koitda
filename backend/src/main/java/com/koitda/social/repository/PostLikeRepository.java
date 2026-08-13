@@ -21,4 +21,15 @@ public interface PostLikeRepository extends JpaRepository<PostLike, PostLike.Key
 	@Query("select l.targetId, count(l) from PostLike l "
 			+ "where l.targetType = :type and l.targetId in :ids group by l.targetId")
 	List<Object[]> countByTargets(@Param("type") TargetType type, @Param("ids") List<Long> ids);
+
+	/** 마이페이지 좋아요 탭 — 내가 좋아요한 공개 오늘의 로그(POST) 목록. */
+	@Query("""
+			select p.id as id, p.displayTitle as displayTitle, p.projectId as projectId, p.logDate as logDate
+			from PostLike l, com.koitda.post.domain.ContentPost p
+			where l.userId = :userId and l.targetType = com.koitda.social.domain.TargetType.POST
+			  and p.id = l.targetId and p.deletedAt is null
+			  and p.postType = com.koitda.post.domain.PostType.PROJECT_LOG
+			order by p.createdAt desc
+			""")
+	List<MyLikedLogView> findMyLikedLogs(@Param("userId") Long userId);
 }

@@ -16,6 +16,8 @@ export type CommentList = { count: number; items: CommentItem[] };
 
 export type ReportResponse = { validReportCount: number; flagged: boolean; autoHidden: boolean };
 
+export type FollowUser = { userId: number; nickname: string; since: string };
+
 export const socialApi = {
   toggleLike: (targetType: TargetType, targetId: number) =>
     apiFetch<LikeResponse>("/likes", { method: "POST", body: { targetType, targetId } }),
@@ -29,4 +31,6 @@ export const socialApi = {
     apiFetch<ReportResponse>("/reports", { method: "POST", body: { targetType, targetId, reasonCode, detail } }),
   follow: (userId: number) => apiFetch<void>(`/follows/${userId}`, { method: "POST" }),
   unfollow: (userId: number) => apiFetch<void>(`/follows/${userId}`, { method: "DELETE" }),
+  following: () => apiFetch<FollowUser[]>("/users/me/following"),
+  followers: () => apiFetch<FollowUser[]>("/users/me/followers"),
 };

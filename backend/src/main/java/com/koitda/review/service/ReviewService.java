@@ -18,6 +18,7 @@ import com.koitda.project.repository.KnittingProjectRepository;
 import com.koitda.review.domain.PatternReview;
 import com.koitda.review.dto.ReviewDtos.CreateReviewRequest;
 import com.koitda.review.dto.ReviewDtos.LoadableLogItem;
+import com.koitda.review.dto.ReviewDtos.MyReviewItem;
 import com.koitda.review.dto.ReviewDtos.ReviewCreatedResponse;
 import com.koitda.review.dto.ReviewDtos.ReviewDeletedResponse;
 import com.koitda.review.dto.ReviewDtos.ReviewDetail;
@@ -119,6 +120,12 @@ public class ReviewService {
 	}
 
 	/** 공개 리뷰 목록 + 현재 사용자 맥락(REVIEW-001·009). userId 는 비로그인 시 null. */
+	/** 내가 쓴 리뷰 목록(나의 뜨개방 › 내 활동). */
+	@Transactional(readOnly = true)
+	public java.util.List<MyReviewItem> myReviews(Long userId) {
+		return reviewRepository.findMyReviews(userId).stream().map(MyReviewItem::from).toList();
+	}
+
 	@Transactional(readOnly = true)
 	public ReviewListResponse list(Long patternId, Long userId) {
 		List<PatternReview> reviews = reviewRepository.findPublicByPattern(patternId);
