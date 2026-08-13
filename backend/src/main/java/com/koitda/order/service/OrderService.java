@@ -33,13 +33,16 @@ public class OrderService {
 	private final OrderItemRepository orderItemRepository;
 	private final PatternLibraryRepository libraryRepository;
 	private final SellingPatternRepository patternRepository;
+	private final com.koitda.user.repository.UserRepository userRepository;
 
 	public OrderService(CustomerOrderRepository orderRepository, OrderItemRepository orderItemRepository,
-			PatternLibraryRepository libraryRepository, SellingPatternRepository patternRepository) {
+			PatternLibraryRepository libraryRepository, SellingPatternRepository patternRepository,
+			com.koitda.user.repository.UserRepository userRepository) {
 		this.orderRepository = orderRepository;
 		this.orderItemRepository = orderItemRepository;
 		this.libraryRepository = libraryRepository;
 		this.patternRepository = patternRepository;
+		this.userRepository = userRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -99,7 +102,27 @@ public class OrderService {
 	public List<OrderListItemResponse> myOrders(Long userId) {
 		return orderRepository.findByBuyerIdOrderByOrderedAtDesc(userId).stream()
 				.map(o -> new OrderListItemResponse(o.getId(), o.getOrderNo(), o.getTotalAmount(),
-						o.getPaymentAmount(), o.getOrderStatus().name(), o.getOrderedAt()))
+						o.getPaymentAmount(), o.getOrderStatus().name(), o.getOrderedAt(), itemsOf(o.getId())))
+				.toList();
+	}
+
+	/** 주문 상세(주문자·결제 정보 포함). 본인 주문만. */
+	@Transactional(readOnly = true)
+	public com.koitda.order.dto.OrderDtos.OrderDetailResponse orderDetail(Long userId, Long orderId) {
+		CustomerOrder order = orderRepository.findByIdAndBuyerId(orderId, userId)
+				.orElseThrow(() -> new com.koitda.common.error.ApiException(
+						com.koitda.common.error.ErrorCode.ORDER_NOT_FOUND, "주문을 찾을 수 없습니다."));
+		var buyer = userRepository.findById(userId).orElse(null);
+		return new com.koitda.order.dto.OrderDtos.OrderDetailResponse(order.getId(), order.getOrderNo(),
+				order.getOrderStatus().name(), order.getOrderedAt(), itemsOf(order.getId()),
+				buyer != null ? buyer.getNickname() : "-", buyer != null ? buyer.getEmail() : "-",
+				order.getTotalAmount(), order.getTotalAmount() - order.getPaymentAmount(), order.getPaymentAmount());
+	}
+
+	private List<com.koitda.order.dto.OrderDtos.OrderItemLine> itemsOf(Long orderId) {
+		return orderItemRepository.findByOrderId(orderId).stream()
+				.map(i -> new com.koitda.order.dto.OrderDtos.OrderItemLine(
+						i.getPatternId(), i.getPatternTitleSnapshot(), i.getItemAmount()))
 				.toList();
 	}
 

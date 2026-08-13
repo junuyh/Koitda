@@ -4,6 +4,7 @@ import com.koitda.order.repository.LibraryView;
 import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 /** 주문·구매 도안 관련 요청·응답 DTO 모음. */
 public final class OrderDtos {
@@ -23,8 +24,18 @@ public final class OrderDtos {
 	public record DemoPaymentResponse(String orderStatus, Long patternId) {
 	}
 
+	/** 주문 항목 한 줄(상품명·금액). 뜨개 도안은 항목당 수량 1. */
+	public record OrderItemLine(Long patternId, String patternTitle, long amount) {
+	}
+
 	public record OrderListItemResponse(Long id, String orderNo, long totalAmount, long paymentAmount,
-			String status, OffsetDateTime orderedAt) {
+			String status, OffsetDateTime orderedAt, List<OrderItemLine> items) {
+	}
+
+	/** 주문 상세 — 주문자·결제 정보 포함. */
+	public record OrderDetailResponse(Long id, String orderNo, String status, OffsetDateTime orderedAt,
+			List<OrderItemLine> items, String buyerName, String buyerEmail,
+			long productAmount, long discountAmount, long paymentAmount) {
 	}
 
 	public record LibraryItemResponse(Long patternId, String patternTitle, String categoryName,

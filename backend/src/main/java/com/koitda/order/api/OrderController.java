@@ -58,6 +58,13 @@ public class OrderController {
 		return orderService.myOrders(principal.getUserId());
 	}
 
+	/** 주문 상세. 본인 주문만. */
+	@GetMapping("/orders/{orderId}")
+	public com.koitda.order.dto.OrderDtos.OrderDetailResponse orderDetail(@PathVariable Long orderId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return orderService.orderDetail(principal.getUserId(), orderId);
+	}
+
 	/** 구매 도안 목록(LIBRARY-001). */
 	@GetMapping("/users/me/pattern-library")
 	public List<LibraryItemResponse> myLibrary(@AuthenticationPrincipal CustomUserDetails principal) {

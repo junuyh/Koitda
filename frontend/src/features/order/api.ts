@@ -10,7 +10,19 @@ export type LibraryItem = {
   revoked: boolean;
 };
 
+export type OrderItemLine = { patternId: number; patternTitle: string; amount: number };
+export type OrderListItem = {
+  id: number; orderNo: string; totalAmount: number; paymentAmount: number;
+  status: string; orderedAt: string; items: OrderItemLine[];
+};
+export type OrderDetail = {
+  id: number; orderNo: string; status: string; orderedAt: string; items: OrderItemLine[];
+  buyerName: string; buyerEmail: string; productAmount: number; discountAmount: number; paymentAmount: number;
+};
+
 export const orderApi = {
+  myOrders: () => apiFetch<OrderListItem[]>("/users/me/orders"),
+  orderDetail: (orderId: number) => apiFetch<OrderDetail>(`/orders/${orderId}`),
   purchasability: (patternId: number) =>
     apiFetch<Purchasability>(`/patterns/${patternId}/purchasability`),
   createOrder: (patternId: number) =>

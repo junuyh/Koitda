@@ -82,4 +82,12 @@ public class OrderItem {
 	public Long getPatternId() {
 		return patternId;
 	}
+
+	public String getPatternTitleSnapshot() {
+		return patternTitleSnapshot;
+	}
+
+	public long getItemAmount() {
+		return itemAmount;
+	}
 }
