@@ -86,6 +86,7 @@ export type PatternDetail = {
   images: Array<{ url: string | null; thumbnail: boolean }>;
   gaugeInfo: GaugeInfo;
   sizeInfo: SizeInfo;
+  needleInfo: Array<{ type?: string; sizeMm?: number }> | null;
 };
 
 export type PatternListParams = {

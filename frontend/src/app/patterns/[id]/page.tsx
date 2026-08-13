@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { authApi } from "@/features/auth/api";
 import { patternApi, type KnittingStats } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
@@ -24,7 +25,42 @@ const MEASURE_LABEL: Record<string, string> = {
   lengthCm: "총장",
   sleeveLengthCm: "소매길이",
   shoulderCm: "어깨너비",
+  armholeCm: "암홀",
 };
+
+/** 여러 장을 배너처럼 자동 전환 + 점 인디케이터. 이미지 없으면 글자 폴백. */
+function ImageCarousel({ images, fallbackChar, wash, badge }: {
+  images: string[]; fallbackChar: string; wash: string; badge: { label: string; cls: string } | null;
+}) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (images.length < 2) return;
+    const t = setInterval(() => setI((p) => (p + 1) % images.length), 3500);
+    return () => clearInterval(t);
+  }, [images.length]);
+  const cur = Math.min(i, Math.max(0, images.length - 1));
+  return (
+    <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border-2 border-neutral-900 bg-gradient-to-br text-6xl font-black text-neutral-900/20 dark:border-neutral-100 dark:text-neutral-100/20 ${wash}`}>
+      <span>{fallbackChar}</span>
+      {images.map((src, idx) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={idx} src={src} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${idx === cur ? "opacity-100" : "opacity-0"}`} />
+      ))}
+      {badge && (
+        <span className={`absolute left-3 top-3 rounded-full border-2 border-neutral-900 px-2.5 py-0.5 text-xs font-bold dark:border-neutral-100 ${badge.cls}`}>{badge.label}</span>
+      )}
+      {images.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+          {images.map((_, idx) => (
+            <button key={idx} type="button" aria-label={`${idx + 1}번 사진`} onClick={() => setI(idx)}
+              className={`h-2 rounded-full border border-neutral-900 transition-all ${idx === cur ? "w-5 bg-neutral-900" : "w-2 bg-white/80"}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PatternDetailPage() {
   const params = useParams<{ id: string }>();
@@ -81,21 +117,13 @@ export default function PatternDetailPage() {
       <Link href="/patterns" className="text-sm font-bold text-neutral-500 hover:underline">← 목록</Link>
 
       <div className="mt-4 grid gap-6 overflow-hidden rounded-3xl border-2 border-neutral-900 bg-white p-5 md:grid-cols-2 dark:border-neutral-100 dark:bg-neutral-950">
-        {/* 대표 이미지 — 깨지면 글자 placeholder 로 폴백 */}
-        <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border-2 border-neutral-900 bg-gradient-to-br text-6xl font-black text-neutral-900/20 dark:border-neutral-100 dark:text-neutral-100/20 ${accent.wash}`}>
-          <span>{p.title.slice(0, 1)}</span>
-          {cover && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover as string} alt={p.title}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-              className="absolute inset-0 h-full w-full object-cover" />
-          )}
-          {p.craftType && (
-            <span className={`absolute left-3 top-3 rounded-full border-2 border-neutral-900 px-2.5 py-0.5 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
-              {CRAFT_LABEL[p.craftType] ?? p.craftType}
-            </span>
-          )}
-        </div>
+        {/* 대표 이미지 — 여러 장은 배너처럼 돌아가며 */}
+        <ImageCarousel
+          images={(p.images ?? []).map((im) => im.url).filter((u): u is string => !!u)}
+          fallbackChar={p.title.slice(0, 1)}
+          wash={accent.wash}
+          badge={p.craftType ? { label: CRAFT_LABEL[p.craftType] ?? p.craftType, cls: accent.solid } : null}
+        />
 
         <div className="flex flex-col">
           {p.categoryName && (
@@ -120,11 +148,11 @@ export default function PatternDetailPage() {
 
           <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-sm">
             <Meta label="뜨개 방식" value={p.craftType ? CRAFT_LABEL[p.craftType] : null} />
-            <Meta label="난이도" value={p.difficulty} />
-            <Meta label="언어" value={p.language} />
-            <Meta label="페이지" value={p.pageCount != null ? `${p.pageCount}p` : null} />
             <Meta label="위시" value={`${p.wishCount}`} />
             <Meta label="공개 니팅로그" value={`${p.publicProjectCount}`} />
+            <Meta label="언어" value={p.language} />
+            <Meta label="난이도" value={p.difficulty} />
+            <Meta label="페이지" value={p.pageCount != null ? `${p.pageCount}p` : null} />
           </dl>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -177,26 +205,44 @@ export default function PatternDetailPage() {
       {/* 니팅로그 집계 — 코잇다의 핵심: 다른 사람들이 실제로 어떻게 떴는지 */}
       {stats && stats.projectCount > 0 && <KnittingStatsSection stats={stats} />}
 
-      {/* 게이지 — 모든 도안 통일 표시(미등록도 항목 노출) */}
-      <Section title="게이지">
-        {p.gaugeInfo ? (
-          <p className="text-sm text-neutral-700 dark:text-neutral-300">
-            {p.gaugeInfo.stitches}코 × {p.gaugeInfo.rows}단
-            {p.gaugeInfo.swatchWidthCm && ` (${p.gaugeInfo.swatchWidthCm}×${p.gaugeInfo.swatchHeightCm}cm)`}
-            {p.gaugeInfo.needleSizeMm && ` · 바늘 ${p.gaugeInfo.needleSizeMm}mm`}
-          </p>
+      {/* 순서: 실 소요량 → 사용 바늘 → 게이지 → 사이즈 */}
+      <Section title="실 소요량">
+        {p.yarnRequirement ? <p className="whitespace-pre-line text-sm">{p.yarnRequirement}</p> : <Empty />}
+      </Section>
+
+      <Section title="사용 바늘">
+        {p.needleInfo && p.needleInfo.length > 0 ? (
+          <ul className="space-y-0.5 text-sm">
+            {p.needleInfo.map((n, i) => (
+              <li key={i}>{[n.type ? (CRAFT_LABEL[n.type] ?? n.type) : null, n.sizeMm != null ? `${n.sizeMm}mm` : null].filter(Boolean).join(" · ") || "-"}</li>
+            ))}
+          </ul>
         ) : <Empty />}
       </Section>
 
-      {/* 사이즈별 시작 콧수·완성 실측 */}
+      <Section title="게이지">
+        {p.gaugeInfo && (p.gaugeInfo.stitches != null || (p.gaugeInfo as { text?: string }).text) ? (
+          <div className="text-sm text-neutral-700 dark:text-neutral-300">
+            {p.gaugeInfo.stitches != null && (
+              <p>
+                {p.gaugeInfo.stitches}코 × {p.gaugeInfo.rows}단
+                {p.gaugeInfo.swatchWidthCm && ` (${p.gaugeInfo.swatchWidthCm}×${p.gaugeInfo.swatchHeightCm}${(p.gaugeInfo as { unit?: string }).unit ?? "cm"})`}
+                {p.gaugeInfo.needleSizeMm && ` · 바늘 ${p.gaugeInfo.needleSizeMm}mm`}
+              </p>
+            )}
+            {(p.gaugeInfo as { text?: string }).text && <p className="mt-1 whitespace-pre-line">{(p.gaugeInfo as { text?: string }).text}</p>}
+          </div>
+        ) : <Empty />}
+      </Section>
+
+      {/* 사이즈 · 완성 실측 (시작 콧수는 노출하지 않음) */}
       <Section title="사이즈">
         {p.sizeInfo && p.sizeInfo.sizes.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] border-collapse text-sm">
+            <table className="w-full min-w-[360px] border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-neutral-900 text-left dark:border-neutral-100">
                   <th className="py-2 pr-4 font-bold">사이즈</th>
-                  <th className="py-2 pr-4 font-bold">시작 콧수</th>
                   {measurementKeys.map((k) => (
                     <th key={k} className="py-2 pr-4 font-bold">{MEASURE_LABEL[k] ?? k}</th>
                   ))}
@@ -206,9 +252,8 @@ export default function PatternDetailPage() {
                 {p.sizeInfo.sizes.map((s) => (
                   <tr key={s.label} className="border-b border-neutral-100 dark:border-neutral-900">
                     <td className="py-2 pr-4">{s.label}</td>
-                    <td className="py-2 pr-4">{s.castOnStitches}코</td>
                     {measurementKeys.map((k) => (
-                      <td key={k} className="py-2 pr-4">{s.measurements[k] ?? "-"}cm</td>
+                      <td key={k} className="py-2 pr-4">{s.measurements[k] != null ? `${s.measurements[k]}${(p.sizeInfo as { unit?: string } | null)?.unit ?? "cm"}` : "-"}</td>
                     ))}
                   </tr>
                 ))}
@@ -216,10 +261,6 @@ export default function PatternDetailPage() {
             </table>
           </div>
         ) : <Empty />}
-      </Section>
-
-      <Section title="실 소요량">
-        {p.yarnRequirement ? <p className="whitespace-pre-line text-sm">{p.yarnRequirement}</p> : <Empty />}
       </Section>
 
       <Section title="상세 설명">

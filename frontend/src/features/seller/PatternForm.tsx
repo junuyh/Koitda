@@ -23,6 +23,7 @@ const MEASURE_COLS: Array<{ key: string; label: string }> = [
   { key: "lengthCm", label: "총장" },
   { key: "sleeveLengthCm", label: "소매길이" },
   { key: "shoulderCm", label: "어깨너비" },
+  { key: "armholeCm", label: "암홀" },
 ];
 
 type SizeRowState = { label: string; castOnStitches: string } & Record<string, string>;
@@ -154,14 +155,24 @@ export function PatternForm({
   const { data: categories } = useQuery({ queryKey: ["pattern-categories"], queryFn: patternApi.categories });
   // 카테고리 트리를 들여쓰기된 평면 옵션으로 펼친다(대분류 → 소분류).
   const categoryOptions = useMemo(() => {
-    const all = categories ?? [];
+    // '스웨터·가디건'은 의류>상의와 중복이라 목록에서 숨긴다.
+    const all = (categories ?? []).filter((c) => c.name !== "스웨터·가디건");
     const byParent = new Map<number | null, typeof all>();
     for (const c of all) {
       const k = c.parentId ?? null;
       if (!byParent.has(k)) byParent.set(k, []);
       byParent.get(k)!.push(c);
     }
-    for (const arr of byParent.values()) arr.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    // 최상위는 '의류'를 맨 앞으로, 나머지는 sortOrder 순.
+    for (const [k, arr] of byParent) {
+      arr.sort((a, b) => {
+        if (k === null) {
+          if (a.name === "의류") return -1;
+          if (b.name === "의류") return 1;
+        }
+        return a.sortOrder - b.sortOrder || a.id - b.id;
+      });
+    }
     const out: Array<{ id: number; label: string }> = [];
     const walk = (parent: number | null, depth: number) => {
       for (const c of byParent.get(parent) ?? []) {
@@ -401,9 +412,11 @@ export function PatternForm({
                   <input key={c.key} placeholder={c.label} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={inputClass} />
                 ))}
               </div>
-              {/* 뒤: 부가 데이터 — 어깨너비 · 시작 콧수(게이지 계산용, 구매 전 미노출) */}
+              {/* 뒤: 부가 데이터 — 어깨너비·암홀 · 시작 콧수(게이지 계산용, 구매 전 미노출) */}
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <input placeholder={`${MEASURE_COLS[3].label} (선택)`} inputMode="decimal" value={row[MEASURE_COLS[3].key] ?? ""} onChange={(e) => setSize(i, MEASURE_COLS[3].key, e.target.value)} className={`${inputClass} max-w-40`} />
+                {MEASURE_COLS.slice(3).map((c) => (
+                  <input key={c.key} placeholder={`${c.label} (선택)`} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={`${inputClass} max-w-32`} />
+                ))}
                 <input placeholder="시작 콧수 (선택·게이지 계산용)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={`${inputClass} max-w-56`} />
                 {form.sizes.length > 1 && (
                   <button type="button" onClick={() => set("sizes", form.sizes.filter((_, idx) => idx !== i))} className="ml-auto text-xs text-red-500 hover:underline">행 삭제</button>
