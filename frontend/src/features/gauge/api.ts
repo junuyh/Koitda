@@ -66,4 +66,8 @@ export const gaugeApi = {
   apply: (calculationId: number) =>
     apiFetch<void>(`/gauge/calculations/${calculationId}/apply`, { method: "POST" }),
   applied: (projectId: number) => apiFetch<AppliedGaugeSummary>(`/projects/${projectId}/gauge-calculation`),
+  // AI 조언(Gemini) — 키 설정 시에만 available. 조언은 저장 안 하고 즉석 생성.
+  aiAvailable: () => apiFetch<{ available: boolean }>("/gauge/ai-available"),
+  aiAdvice: (calculationId: number) =>
+    apiFetch<{ advice: string }>(`/gauge/calculations/${calculationId}/ai-advice`, { method: "POST" }),
 };

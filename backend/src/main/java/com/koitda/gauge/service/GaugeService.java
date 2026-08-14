@@ -36,13 +36,57 @@ public class GaugeService {
 	private final ProjectGaugeRepository projectGaugeRepository;
 	private final GaugeCalculationRepository calculationRepository;
 	private final ObjectMapper objectMapper;
+	private final com.koitda.gauge.ai.GeminiClient geminiClient;
 
 	public GaugeService(KnittingProjectRepository projectRepository, ProjectGaugeRepository projectGaugeRepository,
-			GaugeCalculationRepository calculationRepository, ObjectMapper objectMapper) {
+			GaugeCalculationRepository calculationRepository, ObjectMapper objectMapper,
+			com.koitda.gauge.ai.GeminiClient geminiClient) {
 		this.projectRepository = projectRepository;
 		this.projectGaugeRepository = projectGaugeRepository;
 		this.calculationRepository = calculationRepository;
 		this.objectMapper = objectMapper;
+		this.geminiClient = geminiClient;
+	}
+
+	public boolean aiAvailable() {
+		return geminiClient.isConfigured();
+	}
+
+	/**
+	 * AI 게이지 조언(GAUGE-018 보조). 수치는 코드 계산 결과를 그대로 근거로 넣고,
+	 * AI 에게는 '자연어 조언'만 요청한다(숫자 새로 만들지 말 것). 저장하지 않고 즉석 반환.
+	 */
+	@Transactional(readOnly = true)
+	public String aiAdvice(Long userId, Long calculationId) {
+		GaugeCalculation calc = calculationRepository.findById(calculationId)
+				.orElseThrow(() -> new ApiException(ErrorCode.GAUGE_CALCULATION_NOT_FOUND, "계산을 찾을 수 없습니다."));
+		ownProject(userId, calc.getProjectId());
+		return geminiClient.generate(buildAdvicePrompt(calc));
+	}
+
+	/** 계산 결과(코드 산출값)를 근거로 조언 프롬프트를 구성한다. 숫자는 여기서 이미 확정된 값만 전달. */
+	private String buildAdvicePrompt(GaugeCalculation calc) {
+		String patternGauge = calc.getPatternGauge();
+		String myGauge = calc.getMyGauge();
+		String result = calc.getResult();
+		String summary = calc.getAdjustmentSummary() != null ? calc.getAdjustmentSummary() : "변경 없음";
+		return """
+				당신은 친절한 뜨개 전문가입니다. 아래는 코드가 계산한 게이지 비교 결과입니다.
+				이 수치를 근거로, 초보자도 이해할 수 있는 실용적인 조언을 한국어로 2~3문장만 작성하세요.
+
+				규칙:
+				- 새로운 숫자를 지어내지 마세요. 아래 제공된 값만 근거로 삼으세요.
+				- 바늘 조절, 스와치 재측정, 무늬 반복 확인 같은 실행 가능한 팁 위주로.
+				- 과장·불확실한 단정 금지. 부드럽고 격려하는 말투.
+
+				[도안 게이지] %s
+				[내 게이지] %s
+				[사이즈] %s
+				[부위별 조정 요약] %s
+				[계산 상세(JSON)] %s
+				""".formatted(patternGauge, myGauge,
+				calc.getSelectedSizeLabel() != null ? calc.getSelectedSizeLabel() : "-",
+				summary, result != null ? result : "{}");
 	}
 
 	/** 계산 기본값(GAUGE-002·003·004). 도안 게이지·사이즈는 니팅로그 스냅샷에서, 내 게이지는 등록값에서. */

@@ -173,10 +173,35 @@ export default function GaugeCalcPage() {
 function Result({ result, labels, onApply, applying }: {
   result: CalculationResult; labels: Record<string, string>; onApply: () => void; applying: boolean;
 }) {
+  const { data: ai } = useQuery({ queryKey: ["gauge-ai-available"], queryFn: () => gaugeApi.aiAvailable(), staleTime: 5 * 60 * 1000 });
+  const [advice, setAdvice] = useState<string | null>(null);
+  const getAdvice = useMutation({
+    mutationFn: () => gaugeApi.aiAdvice(result.calculationId),
+    onSuccess: (r) => setAdvice(r.advice),
+    onError: (e) => window.alert(e instanceof ApiError ? e.message : "AI 조언 생성에 실패했습니다."),
+  });
+
   return (
     <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
       <h2 className="mb-3 text-sm font-semibold">계산 결과</h2>
       <GaugeResultView result={result} labels={labels} />
+
+      {/* AI 조언 — 키 설정 시에만. 수치는 코드 계산 결과, AI 는 조언 문구만 생성. */}
+      {ai?.available && (
+        <div className="mt-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-bold text-amber-800 dark:text-amber-300">✨ AI 게이지 조언</span>
+            <button type="button" onClick={() => getAdvice.mutate()} disabled={getAdvice.isPending}
+              className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold disabled:opacity-50 dark:border-neutral-100">
+              {getAdvice.isPending ? "생성 중…" : advice ? "다시 받기" : "조언 받기"}
+            </button>
+          </div>
+          {advice
+            ? <p className="mt-2 whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-200">{advice}</p>
+            : <p className="mt-2 text-xs text-neutral-500">계산 결과를 바탕으로 바늘·스와치 조정 팁을 받아보세요. (참고용 · 저장되지 않음)</p>}
+        </div>
+      )}
+
       <button type="button" onClick={onApply} disabled={applying}
         className="mt-6 w-full rounded-full border-2 border-neutral-900 px-3 py-2.5 text-sm font-bold disabled:opacity-50 dark:border-neutral-100">
         {applying ? "적용 중…" : "이 계산을 니팅로그에 적용"}

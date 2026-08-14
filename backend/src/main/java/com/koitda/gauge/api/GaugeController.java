@@ -44,6 +44,19 @@ public class GaugeController {
 		return gaugeService.getCalculation(principal.getUserId(), calculationId);
 	}
 
+	/** AI 조언 사용 가능 여부(버튼 노출 결정용). 비로그인 허용. */
+	@GetMapping("/gauge/ai-available")
+	public java.util.Map<String, Boolean> aiAvailable() {
+		return java.util.Map.of("available", gaugeService.aiAvailable());
+	}
+
+	/** AI 게이지 조언(즉석 생성, 저장 안 함). 계산 소유자만. */
+	@PostMapping("/gauge/calculations/{calculationId}/ai-advice")
+	public java.util.Map<String, String> aiAdvice(@PathVariable Long calculationId,
+			@AuthenticationPrincipal CustomUserDetails principal) {
+		return java.util.Map.of("advice", gaugeService.aiAdvice(principal.getUserId(), calculationId));
+	}
+
 	@PostMapping("/gauge/calculations/{calculationId}/apply")
 	public void apply(@PathVariable Long calculationId,
 			@AuthenticationPrincipal CustomUserDetails principal) {
