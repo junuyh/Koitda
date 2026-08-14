@@ -107,9 +107,10 @@ export default function PatternDetailPage() {
   if (isLoading) return <Centered>불러오는 중…</Centered>;
   if (isError || !p) return <Centered>도안을 찾을 수 없습니다.</Centered>;
 
-  const measurementKeys = p.sizeInfo?.sizes?.[0]
-    ? Object.keys(p.sizeInfo.sizes[0].measurements)
-    : [];
+  // 실측 컬럼 = 모든 사이즈 행에 등장한 항목의 합집합(작품마다·행마다 항목이 달라도 누락 없이 표시).
+  const measurementKeys = Array.from(
+    new Set((p.sizeInfo?.sizes ?? []).flatMap((s) => Object.keys(s.measurements ?? {})))
+  );
   const accent = accentOf(p.id);
   const cover = p.images?.find((im) => im.thumbnail)?.url ?? p.images?.[0]?.url;
 

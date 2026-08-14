@@ -17,21 +17,47 @@ function fileIdsFromPreview(p?: SellerPatternPreview): number[] {
     .filter((n) => Number.isFinite(n) && n > 0);
 }
 
-/** PATTERN-011 권장 실측 항목(의류). 사이즈 행마다 선택 입력. */
-const MEASURE_COLS: Array<{ key: string; label: string }> = [
-  { key: "chestCm", label: "가슴둘레" },
-  { key: "lengthCm", label: "총장" },
-  { key: "sleeveLengthCm", label: "소매길이" },
-  { key: "shoulderCm", label: "어깨너비" },
-  { key: "armholeCm", label: "암홀" },
-];
+/** 기존 영문 키(초기 데이터) → 한글 라벨. 자유 텍스트로 프리필할 때 사람이 읽는 라벨로 되돌린다. */
+const KNOWN_MEASURE_LABEL: Record<string, string> = {
+  chestCm: "가슴둘레", lengthCm: "총장", sleeveLengthCm: "소매길이",
+  shoulderCm: "어깨너비", armholeCm: "암홀", waistCm: "허리단면", hipCm: "엉덩이단면",
+};
 
-type SizeRowState = { label: string; castOnStitches: string } & Record<string, string>;
+/**
+ * 자유 텍스트 실측을 '라벨: 값' 쌍으로 추출한다(규칙 기반 — AI 아님).
+ * 예) "허리단면 38cm / 밑위 22cm / 허벅지 단면 28cm" → {허리단면:38, 밑위:22, 허벅지 단면:28}
+ * 구분자: 줄바꿈 / · ; , · 값 뒤 단위(cm·인치 등)는 무시하고, 각 조각의 '마지막 숫자'를 값으로 본다.
+ */
+export function parseMeasurements(text: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const raw of (text ?? "").split(/[\n/·;,]+/)) {
+    const seg = raw.trim();
+    if (!seg) continue;
+    // 라벨(비탐욕) + [구분] + 마지막 숫자(소수 허용) + [단위]. $ 앵커로 '끝의 숫자'를 값으로 잡는다.
+    const m = seg.match(/^(.+?)\s*[:=]?\s*(-?\d+(?:\.\d+)?)\s*(?:cm|센치|센티|inch|인치|in|")?\.?\s*$/i);
+    if (!m) continue;
+    const label = m[1].replace(/[:=]+$/, "").trim();
+    const value = Number(m[2]);
+    if (!label || !Number.isFinite(value) || value < 0) continue;
+    out[label] = value; // 같은 라벨은 마지막 값으로 덮어씀
+  }
+  return out;
+}
+
+/** measurements 맵 → 자유 텍스트(프리필·수정용). */
+function measurementsToText(m: Record<string, number> | undefined | null, unit: string): string {
+  if (!m) return "";
+  return Object.entries(m)
+    .map(([k, v]) => `${KNOWN_MEASURE_LABEL[k] ?? k} ${v}${unit}`)
+    .join(" / ");
+}
+
+type SizeRowState = { label: string; castOnStitches: string; measureText: string };
 type GaugeState = { stitches: string; rows: string; swatchWidthCm: string; swatchHeightCm: string; needleSizeMm: string; text: string; unit: string };
 type NeedleRow = { type: "KNIT" | "CROCHET"; sizeMm: string };
 
 const emptyGauge: GaugeState = { stitches: "", rows: "", swatchWidthCm: "10", swatchHeightCm: "10", needleSizeMm: "", text: "", unit: "cm" };
-const emptySize = (): SizeRowState => ({ label: "", castOnStitches: "" });
+const emptySize = (): SizeRowState => ({ label: "", castOnStitches: "", measureText: "" });
 const emptyNeedle = (): NeedleRow => ({ type: "KNIT", sizeMm: "" });
 
 export const inputClass =
@@ -77,11 +103,11 @@ function fromPreview(p: SellerPatternPreview): FormState {
       return [emptyNeedle()];
     })(),
     sizes:
-      p.sizeInfo?.sizes?.map((s) => {
-        const row: SizeRowState = { label: s.label ?? "", castOnStitches: numStr(s.castOnStitches) };
-        for (const c of MEASURE_COLS) row[c.key] = numStr(s.measurements?.[c.key]);
-        return row;
-      }) ?? [emptySize()],
+      p.sizeInfo?.sizes?.map((s) => ({
+        label: s.label ?? "",
+        castOnStitches: numStr(s.castOnStitches),
+        measureText: measurementsToText(s.measurements, (p.sizeInfo as { unit?: string } | null)?.unit ?? "cm"),
+      })) ?? [emptySize()],
     sizeUnit: (p.sizeInfo as { unit?: string } | null)?.unit ?? "cm",
   };
 }
@@ -252,18 +278,8 @@ export function PatternForm({
         }
         castOn = cast;
       }
-      const measurements: Record<string, number> = {};
-      for (const c of MEASURE_COLS) {
-        const v = row[c.key];
-        if (v && v.trim() !== "") {
-          const n = Number(v);
-          if (!Number.isFinite(n) || n < 0) {
-            setError(`'${row.label}' 사이즈의 ${c.label} 값이 올바르지 않습니다.`);
-            return null;
-          }
-          measurements[c.key] = n;
-        }
-      }
+      // 자유 텍스트 실측 → {라벨: 값}. 규칙 기반 추출(AI 아님).
+      const measurements = parseMeasurements(row.measureText);
       sizes.push({ label: row.label.trim(), castOnStitches: castOn, measurements });
     }
 
@@ -403,31 +419,47 @@ export function PatternForm({
             <option value="inch">inch</option>
           </select>
         </div>
-        <p className="mb-2 text-xs text-neutral-500">사이즈명만 필수입니다. 시작 콧수·완성 실측은 선택이며, 실측은 게이지 계산의 기준이 됩니다. (의류 상의·드레스는 가슴둘레 권장)</p>
+        <p className="mb-2 text-xs text-neutral-500">
+          사이즈명만 필수입니다. 완성 실측은 <b>자유롭게 줄글로</b> 입력하면 항목이 자동 추출됩니다 —
+          작품마다 항목이 달라도 됩니다. (예: <span className="font-mono">허리단면 38cm / 밑위 22cm / 허벅지 단면 28cm</span>)
+        </p>
         <div className="space-y-3">
-          {form.sizes.map((row, i) => (
-            <div key={i} className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
-              {/* 앞: 필수/주요 데이터 — 사이즈명 · 가슴둘레 · 총장 · 소매길이 */}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-                <div className="sm:col-span-3">
-                  <input placeholder="사이즈명 (예: M)" value={row.label} onChange={(e) => setSize(i, "label", e.target.value)} className={inputClass} />
+          {form.sizes.map((row, i) => {
+            const parsed = parseMeasurements(row.measureText);
+            const parsedKeys = Object.keys(parsed);
+            return (
+              <div key={i} className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input placeholder="사이즈명 (예: M)" value={row.label} onChange={(e) => setSize(i, "label", e.target.value)} className={`${inputClass} max-w-40`} />
+                  <input placeholder="시작 콧수 (선택·게이지 계산용)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={`${inputClass} max-w-52`} />
+                  {form.sizes.length > 1 && (
+                    <button type="button" onClick={() => set("sizes", form.sizes.filter((_, idx) => idx !== i))} className="ml-auto text-xs text-red-500 hover:underline">행 삭제</button>
+                  )}
                 </div>
-                {MEASURE_COLS.slice(0, 3).map((c) => (
-                  <input key={c.key} placeholder={c.label} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={inputClass} />
-                ))}
-              </div>
-              {/* 뒤: 부가 데이터 — 어깨너비·암홀 · 시작 콧수(게이지 계산용, 구매 전 미노출) */}
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {MEASURE_COLS.slice(3).map((c) => (
-                  <input key={c.key} placeholder={`${c.label} (선택)`} inputMode="decimal" value={row[c.key] ?? ""} onChange={(e) => setSize(i, c.key, e.target.value)} className={`${inputClass} max-w-32`} />
-                ))}
-                <input placeholder="시작 콧수 (선택·게이지 계산용)" inputMode="numeric" value={row.castOnStitches} onChange={(e) => setSize(i, "castOnStitches", e.target.value)} className={`${inputClass} max-w-56`} />
-                {form.sizes.length > 1 && (
-                  <button type="button" onClick={() => set("sizes", form.sizes.filter((_, idx) => idx !== i))} className="ml-auto text-xs text-red-500 hover:underline">행 삭제</button>
+                <textarea
+                  placeholder={`완성 실측 (자유 입력)\n예: 가슴둘레 90${form.sizeUnit} / 총장 60${form.sizeUnit} / 소매길이 58${form.sizeUnit}`}
+                  rows={2}
+                  value={row.measureText}
+                  onChange={(e) => setSize(i, "measureText", e.target.value)}
+                  className={`${inputClass} mt-2 w-full resize-y font-mono text-sm`}
+                />
+                {/* 추출 미리보기 — 판매자가 인식 결과를 바로 확인 */}
+                {row.measureText.trim() !== "" && (
+                  parsedKeys.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {parsedKeys.map((k) => (
+                        <span key={k} className="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-xs dark:border-neutral-700 dark:bg-neutral-900">
+                          {k} <b>{parsed[k]}{form.sizeUnit}</b>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-amber-600">인식된 실측 항목이 없습니다. ‘라벨 숫자’ 형식으로 입력해 주세요 (예: 허리단면 38).</p>
+                  )
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Section>
 
