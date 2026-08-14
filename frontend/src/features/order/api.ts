@@ -34,10 +34,11 @@ export const orderApi = {
   myLibrary: () => apiFetch<LibraryItem[]>("/users/me/pattern-library"),
   libraryDetail: (patternId: number) =>
     apiFetch<LibraryDetail>(`/users/me/pattern-library/${patternId}`),
-  // PDF 다운로드: POST 로 바이트를 받아 브라우저 다운로드를 트리거한다.
-  downloadPdf: async (patternId: number, fallbackName: string) => {
+  // PDF 다운로드: POST 로 바이트를 받아 브라우저 다운로드를 트리거한다. fileId 지정 시 해당 PDF, 미지정 시 대표.
+  downloadPdf: async (patternId: number, fallbackName: string, fileId?: number) => {
     const csrf = getCookie("XSRF-TOKEN");
-    const res = await fetch(`/api/v1/pattern-library/${patternId}/download`, {
+    const qs = fileId != null ? `?fileId=${fileId}` : "";
+    const res = await fetch(`/api/v1/pattern-library/${patternId}/download${qs}`, {
       method: "POST",
       credentials: "include",
       headers: csrf ? { "X-XSRF-TOKEN": decodeURIComponent(csrf) } : {},
@@ -66,6 +67,7 @@ export type LibraryDetail = {
   hasPdf: boolean;
   downloadCount: number;
   downloadLimit: number;
+  pdfFileIds: number[] | null;
 };
 
 function getCookie(name: string): string | null {

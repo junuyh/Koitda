@@ -150,17 +150,32 @@ class SellerPatternRegistrationTest {
 	}
 
 	@Test
-	void 사이즈에_시작콧수가_없으면_422_스키마오류() throws Exception {
+	void 사이즈명이_없으면_422_스키마오류() throws Exception {
+		// 시작 콧수(castOnStitches)는 선택 항목이 되었으므로, 사이즈명(label) 누락만 스키마 오류다.
 		MockHttpSession seller = loginAsSeller("seller2@koitda.dev", "브랜드2");
 		String bad = """
 				{"title":"x","craftType":"KNIT",
 				 "gauge":{"stitches":22,"rows":30,"swatchWidthCm":10,"swatchHeightCm":10,"needleSizeMm":4.5},
-				 "sizes":[{"label":"S"}]}
+				 "sizes":[{"castOnStitches":120}]}
 				""";
 		mockMvc.perform(post("/api/v1/seller/pattern-drafts").with(csrf()).session(seller)
 				.contentType(MediaType.APPLICATION_JSON).content(bad))
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.code").value("PATTERN_SIZE_SCHEMA_INVALID"));
+	}
+
+	@Test
+	void 시작콧수가_없어도_사이즈명만_있으면_임시저장된다() throws Exception {
+		// 코바늘 등 시작 콧수 개념이 없는 도안을 위해 castOnStitches 는 선택 항목이다.
+		MockHttpSession seller = loginAsSeller("nocaston-seller@koitda.dev", "노캐스트브랜드");
+		String body = """
+				{"title":"코바늘 도안","craftType":"CROCHET","regularPrice":5000,
+				 "sizes":[{"label":"one size","measurements":{"chestCm":90}}]}
+				""";
+		mockMvc.perform(post("/api/v1/seller/pattern-drafts").with(csrf()).session(seller)
+				.contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.productStatus").value("DRAFT"));
 	}
 
 	@Test
@@ -176,6 +191,53 @@ class SellerPatternRegistrationTest {
 		mockMvc.perform(post("/api/v1/seller/pattern-drafts/" + draftId + "/submit").with(csrf()).session(seller))
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.code").value("PATTERN_SIZE_SCHEMA_INVALID"));
+	}
+
+	@Test
+	void 여러_PDF를_등록하면_대표는_첫번째이고_목록이_저장된다() throws Exception {
+		MockHttpSession seller = loginAsSeller("multipdf-seller@koitda.dev", "멀티PDF브랜드");
+
+		// PDF 두 개 업로드
+		long f1 = uploadPdf(seller, "a.pdf");
+		long f2 = uploadPdf(seller, "b.pdf");
+
+		String body = """
+				{
+				  "title":"멀티PDF 스웨터","craftType":"KNIT","regularPrice":10000,
+				  "gauge":{"stitches":22,"rows":30,"swatchWidthCm":10,"swatchHeightCm":10,"needleSizeMm":4.5},
+				  "sizes":[{"label":"S","castOnStitches":120,"measurements":{"chestCm":90}}],
+				  "pdfFileIds":[%d,%d]
+				}
+				""".formatted(f1, f2);
+		MvcResult saved = mockMvc.perform(post("/api/v1/seller/pattern-drafts").with(csrf()).session(seller)
+				.contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isCreated()).andReturn();
+		long draftId = ((Number) JsonPath.read(saved.getResponse().getContentAsString(), "$.draftId")).longValue();
+
+		// 미리보기: 대표(pdfFileId)=첫 번째, 목록(pdfFileIds)=[f1,f2]
+		mockMvc.perform(get("/api/v1/seller/pattern-drafts/" + draftId + "/preview").session(seller))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.pdfFileId").value((int) f1))
+				.andExpect(jsonPath("$.pdfFileIds.length()").value(2))
+				.andExpect(jsonPath("$.pdfFileIds[0]").value((int) f1))
+				.andExpect(jsonPath("$.pdfFileIds[1]").value((int) f2));
+
+		// DB: current_file_id=대표, pdf_file_ids JSONB 저장
+		Long current = jdbc.queryForObject(
+				"SELECT current_file_id FROM selling_pattern WHERE id = ?", Long.class, draftId);
+		assert current != null && current == f1;
+		String ids = jdbc.queryForObject(
+				"SELECT pdf_file_ids::text FROM selling_pattern WHERE id = ?", String.class, draftId);
+		assert ids != null && ids.contains(String.valueOf(f1)) && ids.contains(String.valueOf(f2));
+	}
+
+	private long uploadPdf(MockHttpSession session, String name) throws Exception {
+		org.springframework.mock.web.MockMultipartFile file =
+				new org.springframework.mock.web.MockMultipartFile("file", name, "application/pdf", "%PDF-1.4 x".getBytes());
+		MvcResult up = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.multipart("/api/v1/files").file(file).param("usageType", "PATTERN_PDF").with(csrf()).session(session))
+				.andExpect(status().isOk()).andReturn();
+		return ((Number) JsonPath.read(up.getResponse().getContentAsString(), "$.id")).longValue();
 	}
 
 	@Test

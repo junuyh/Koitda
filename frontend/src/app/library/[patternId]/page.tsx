@@ -18,7 +18,8 @@ export default function LibraryDetailPage() {
   });
 
   const download = useMutation({
-    mutationFn: () => orderApi.downloadPdf(patternId, `${data?.patternTitle ?? "pattern"}.pdf`),
+    mutationFn: (fileId?: number) =>
+      orderApi.downloadPdf(patternId, `${data?.patternTitle ?? "pattern"}.pdf`, fileId),
     onSuccess: async (r) => {
       await queryClient.invalidateQueries({ queryKey: ["library-detail", patternId] });
       window.alert(`다운로드를 시작합니다. 남은 횟수 ${r.remaining}회`);
@@ -45,18 +46,33 @@ export default function LibraryDetailPage() {
         </dl>
 
         <div className="mt-6 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-          {data.revoked ? (
-            <p className="text-sm text-neutral-500">환불된 도안은 다운로드할 수 없습니다.</p>
-          ) : !data.hasPdf ? (
-            <p className="text-sm text-neutral-500">아직 판매자가 PDF를 등록하지 않았습니다.</p>
-          ) : data.downloadCount >= data.downloadLimit ? (
-            <p className="text-sm text-neutral-500">다운로드 한도({data.downloadLimit}회)를 모두 사용했습니다.</p>
-          ) : (
-            <button type="button" onClick={() => download.mutate()} disabled={download.isPending}
-              className="w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
-              {download.isPending ? "준비 중…" : "PDF 다운로드"}
-            </button>
-          )}
+          {(() => {
+            const files = data.pdfFileIds ?? [];
+            const limitReached = data.downloadCount >= data.downloadLimit;
+            if (data.revoked) return <p className="text-sm text-neutral-500">환불된 도안은 다운로드할 수 없습니다.</p>;
+            if (!data.hasPdf) return <p className="text-sm text-neutral-500">아직 판매자가 PDF를 등록하지 않았습니다.</p>;
+            if (limitReached) return <p className="text-sm text-neutral-500">다운로드 한도({data.downloadLimit}회)를 모두 사용했습니다.</p>;
+            // PDF 가 여러 개면 각각 개별 버튼으로, 하나면 단일 버튼으로 노출.
+            if (files.length > 1) {
+              return (
+                <div className="space-y-2">
+                  {files.map((fid, i) => (
+                    <button key={fid} type="button" onClick={() => download.mutate(fid)} disabled={download.isPending}
+                      className="flex w-full items-center justify-between rounded-lg bg-neutral-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
+                      <span>PDF {i + 1}{i === 0 ? " (대표)" : ""} 다운로드</span>
+                      <span aria-hidden>↓</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <button type="button" onClick={() => download.mutate(undefined)} disabled={download.isPending}
+                className="w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
+                {download.isPending ? "준비 중…" : "PDF 다운로드"}
+              </button>
+            );
+          })()}
           <p className="mt-2 text-xs text-neutral-400">개인 사용 목적의 저작물입니다. 재배포·공유는 금지됩니다.</p>
         </div>
       </div>

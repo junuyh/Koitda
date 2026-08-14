@@ -56,6 +56,7 @@ public final class OrderDtos {
 			boolean revoked,
 			boolean hasPdf,
 			int downloadCount,
-			int downloadLimit) {
+			int downloadLimit,
+			@com.fasterxml.jackson.annotation.JsonRawValue String pdfFileIds) {
 	}
 }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { sellerPatternApi, type SellerPatternListItem } from "@/features/seller/api";
+import { inquiryApi } from "@/features/inquiry/api";
 
 const STATUS_FILTERS: Array<{ value: string; label: string }> = [
   { value: "", label: "전체" },
@@ -20,15 +21,32 @@ export default function SellerPatternsPage() {
     queryKey: ["seller-patterns", status],
     queryFn: () => sellerPatternApi.list(status || undefined),
   });
+  // 미답변 문의 개수(판매자 알림 배지)
+  const { data: inbox } = useQuery({
+    queryKey: ["seller-inbox-count"],
+    queryFn: () => inquiryApi.sellerInbox(true),
+  });
+  const unanswered = inbox?.unansweredCount ?? 0;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">내 도안</h1>
-        <Link href="/seller/patterns/new"
-          className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-          + 새 도안 등록
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/seller/inquiries"
+            className="relative rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-medium dark:border-neutral-100">
+            문의
+            {unanswered > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                {unanswered}
+              </span>
+            )}
+          </Link>
+          <Link href="/seller/patterns/new"
+            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+            + 새 도안 등록
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

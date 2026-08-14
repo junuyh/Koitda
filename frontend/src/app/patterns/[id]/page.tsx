@@ -8,6 +8,7 @@ import { authApi } from "@/features/auth/api";
 import { patternApi, type KnittingStats } from "@/features/pattern/api";
 import { orderApi } from "@/features/order/api";
 import { ReviewSection } from "@/features/review/ReviewSection";
+import { InquirySection } from "@/features/inquiry/InquirySection";
 import { RichContent } from "@/features/editor/RichContent";
 import { accentOf } from "@/features/ui/accent";
 import type { JSONContent } from "@tiptap/react";
@@ -287,6 +288,7 @@ export default function PatternDetailPage() {
       </div>
 
       <ReviewSection patternId={id} loggedIn={!!me} />
+      <InquirySection patternId={id} loggedIn={!!me} />
     </main>
   );
 }

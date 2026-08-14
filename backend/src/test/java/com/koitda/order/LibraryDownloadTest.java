@@ -48,9 +48,11 @@ class LibraryDownloadTest {
 	}
 
 	private long seedPatternWithPdf(MockHttpSession seller, byte[] pdf) throws Exception {
-		Long su = jdbc.queryForObject("INSERT INTO users(nickname) VALUES ('PDF공방') RETURNING id", Long.class);
+		// 닉네임은 유니크 제약이 있어 테스트마다 다른 값을 써야 한다.
+		String brand = "PDF공방_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+		Long su = jdbc.queryForObject("INSERT INTO users(nickname) VALUES (?) RETURNING id", Long.class, brand);
 		Long sid = jdbc.queryForObject(
-				"INSERT INTO seller_profile(user_id, brand_name) VALUES (?, 'PDF공방') RETURNING id", Long.class, su);
+				"INSERT INTO seller_profile(user_id, brand_name) VALUES (?, ?) RETURNING id", Long.class, su, brand);
 		long patternId = jdbc.queryForObject("""
 				INSERT INTO selling_pattern (seller_id, title, craft_type, regular_price, sale_price, product_status, published_at)
 				VALUES (?, 'PDF 스웨터', 'KNIT', 8000, 8000, 'APPROVED', now()) RETURNING id
@@ -71,6 +73,54 @@ class LibraryDownloadTest {
 		long orderId = ((Number) JsonPath.read(o.getResponse().getContentAsString(), "$.id")).longValue();
 		mockMvc.perform(post("/api/v1/orders/" + orderId + "/payments/complete").with(csrf()).session(s))
 				.andExpect(status().isOk());
+	}
+
+	/** 이미 등록된 도안에 PDF 하나를 더 업로드해 pdf_file_ids 에 연결한다. */
+	private long uploadPdfInto(MockHttpSession seller, long patternId, byte[] pdf, long primaryFileId) throws Exception {
+		MockMultipartFile file = new MockMultipartFile("file", "extra.pdf", "application/pdf", pdf);
+		MvcResult up = mockMvc.perform(multipart("/api/v1/files").file(file).param("usageType", "PATTERN_PDF")
+				.with(csrf()).session(seller)).andExpect(status().isOk()).andReturn();
+		long fileId = ((Number) JsonPath.read(up.getResponse().getContentAsString(), "$.id")).longValue();
+		jdbc.update("UPDATE selling_pattern SET pdf_file_ids = ?::jsonb WHERE id = ?",
+				"[" + primaryFileId + "," + fileId + "]", patternId);
+		return fileId;
+	}
+
+	@Test
+	void 여러_PDF_도안은_파일별로_다운로드되고_남의_파일은_거부된다() throws Exception {
+		MockHttpSession seller = login("multi-seller@koitda.dev");
+		byte[] pdf1 = "%PDF-1.4 first".getBytes();
+		long patternId = seedPatternWithPdf(seller, pdf1);
+		long primary = jdbc.queryForObject("SELECT current_file_id FROM selling_pattern WHERE id = ?", Long.class, patternId);
+		byte[] pdf2 = "%PDF-1.4 second".getBytes();
+		long secondFileId = uploadPdfInto(seller, patternId, pdf2, primary);
+
+		MockHttpSession buyer = login("multi-buyer@koitda.dev");
+		purchase(buyer, patternId);
+
+		// 상세: pdf_file_ids 두 개 노출(대표가 첫 번째)
+		mockMvc.perform(get("/api/v1/users/me/pattern-library/" + patternId).session(buyer))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.pdfFileIds.length()").value(2))
+				.andExpect(jsonPath("$.pdfFileIds[0]").value((int) primary))
+				.andExpect(jsonPath("$.pdfFileIds[1]").value((int) secondFileId));
+
+		// 대표(fileId 미지정) 다운로드 → 첫 번째 PDF
+		MvcResult dl0 = mockMvc.perform(post("/api/v1/pattern-library/" + patternId + "/download").with(csrf()).session(buyer))
+				.andExpect(status().isOk()).andReturn();
+		org.junit.jupiter.api.Assertions.assertArrayEquals(pdf1, dl0.getResponse().getContentAsByteArray());
+
+		// 두 번째 PDF 를 fileId 로 지정해 다운로드
+		MvcResult dl1 = mockMvc.perform(post("/api/v1/pattern-library/" + patternId + "/download")
+						.param("fileId", String.valueOf(secondFileId)).with(csrf()).session(buyer))
+				.andExpect(status().isOk()).andReturn();
+		org.junit.jupiter.api.Assertions.assertArrayEquals(pdf2, dl1.getResponse().getContentAsByteArray());
+
+		// 이 도안에 속하지 않는 fileId 는 거부(FILE_NOT_FOUND → 404)
+		mockMvc.perform(post("/api/v1/pattern-library/" + patternId + "/download")
+						.param("fileId", "999999").with(csrf()).session(buyer))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("FILE_NOT_FOUND"));
 	}
 
 	@Test

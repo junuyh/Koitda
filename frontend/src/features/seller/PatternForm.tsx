@@ -147,7 +147,10 @@ export function PatternForm({
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? fromPreview(initial) : blankForm));
   const [imageIds, setImageIds] = useState<number[]>(() => fileIdsFromPreview(initial));
-  const [pdfId, setPdfId] = useState<number | null>(() => initial?.pdfFileId ?? null);
+  const [pdfIds, setPdfIds] = useState<number[]>(() => {
+    if (initial?.pdfFileIds && initial.pdfFileIds.length) return initial.pdfFileIds;
+    return initial?.pdfFileId != null ? [initial.pdfFileId] : [];
+  });
   const [pdfUploading, setPdfUploading] = useState(false);
   const [descDoc, setDescDoc] = useState<JSONContent | null>(() => (initial?.descriptionDocument as JSONContent) ?? null);
   const [error, setError] = useState<string | null>(null);
@@ -287,7 +290,8 @@ export function PatternForm({
       sizeUnit: form.sizeUnit,
       imageFileIds: imageIds.length ? imageIds : undefined,
       thumbnailFileId: imageIds[0],
-      pdfFileId: pdfId ?? undefined,
+      pdfFileId: pdfIds[0] ?? undefined,
+      pdfFileIds: pdfIds.length ? pdfIds : undefined,
     };
   }
 
@@ -450,26 +454,32 @@ export function PatternForm({
       </Section>
 
       <Section title="도안 PDF">
-        {pdfId ? (
-          <div className="flex items-center gap-3 text-sm">
-            <span className="rounded-md bg-neutral-100 px-2 py-1 dark:bg-neutral-800">PDF 첨부됨 (#{pdfId})</span>
-            <button type="button" onClick={() => setPdfId(null)} className="text-xs text-red-500 hover:underline">제거</button>
-          </div>
-        ) : (
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-neutral-300 px-3 py-2 text-sm text-neutral-500 dark:border-neutral-700">
-            {pdfUploading ? "올리는 중…" : "+ PDF 선택"}
-            <input type="file" accept="application/pdf" hidden disabled={pdfUploading}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setPdfUploading(true);
-                try { const r = await fileApi.upload(f, "PATTERN_PDF"); setPdfId(r.id); }
-                catch { window.alert("PDF 업로드에 실패했습니다."); }
-                finally { setPdfUploading(false); e.target.value = ""; }
-              }} />
-          </label>
+        {pdfIds.length > 0 && (
+          <ul className="mb-2 space-y-1.5">
+            {pdfIds.map((id, i) => (
+              <li key={id} className="flex items-center gap-3 text-sm">
+                <span className="rounded-md bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
+                  PDF {i + 1}{i === 0 ? " (대표)" : ""} · #{id}
+                </span>
+                <button type="button" onClick={() => setPdfIds((ids) => ids.filter((x) => x !== id))}
+                  className="text-xs text-red-500 hover:underline">제거</button>
+              </li>
+            ))}
+          </ul>
         )}
-        <p className="mt-1 text-xs text-neutral-400">구매자가 이 PDF를 다운로드합니다. (PDF만, 30MB 이하)</p>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-neutral-300 px-3 py-2 text-sm text-neutral-500 dark:border-neutral-700">
+          {pdfUploading ? "올리는 중…" : pdfIds.length ? "+ PDF 추가" : "+ PDF 선택"}
+          <input type="file" accept="application/pdf" hidden disabled={pdfUploading}
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setPdfUploading(true);
+              try { const r = await fileApi.upload(f, "PATTERN_PDF"); setPdfIds((ids) => [...ids, r.id]); }
+              catch { window.alert("PDF 업로드에 실패했습니다."); }
+              finally { setPdfUploading(false); e.target.value = ""; }
+            }} />
+        </label>
+        <p className="mt-1 text-xs text-neutral-400">구매자가 이 PDF들을 다운로드합니다. 여러 개 등록 가능하며 첫 번째가 대표입니다. (PDF만, 100MB 이하)</p>
       </Section>
 
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

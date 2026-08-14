@@ -35,8 +35,9 @@ public class LibraryController {
 
 	@PostMapping("/pattern-library/{patternId}/download")
 	public ResponseEntity<byte[]> download(@PathVariable Long patternId,
+			@org.springframework.web.bind.annotation.RequestParam(required = false) Long fileId,
 			@AuthenticationPrincipal CustomUserDetails principal) {
-		DownloadResult r = libraryService.download(principal.getUserId(), patternId);
+		DownloadResult r = libraryService.download(principal.getUserId(), patternId, fileId);
 		String encoded = URLEncoder.encode(r.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
 		return ResponseEntity.ok()
 				.contentType(MediaType.APPLICATION_PDF)

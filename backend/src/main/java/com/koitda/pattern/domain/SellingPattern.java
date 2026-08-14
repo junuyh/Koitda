@@ -124,6 +124,10 @@ public class SellingPattern {
 	@Column(name = "current_file_id")
 	private Long currentFileId;
 
+	@org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+	@Column(name = "pdf_file_ids")
+	private String pdfFileIds; // 여러 PDF 파일 id 목록(JSON 배열). current_file_id 는 대표(첫 번째).
+
 	// --- 심사(승인/반려) 감사. 관리자만 갱신(ADMIN-001) ---
 	@Column(name = "reviewed_by")
 	private Long reviewedBy;
@@ -238,6 +242,15 @@ public class SellingPattern {
 
 	public Long getCurrentFileId() {
 		return currentFileId;
+	}
+
+	public String getPdfFileIds() {
+		return pdfFileIds;
+	}
+
+	/** PDF 목록(JSON 배열) 설정. DRAFT·REJECTED 에서만 수정 가능(editDetails 와 동일 정책). */
+	public void setPdfFileIds(String pdfFileIds) {
+		this.pdfFileIds = pdfFileIds;
 	}
 
 	public Long getReviewedBy() {

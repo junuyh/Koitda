@@ -130,6 +130,7 @@ public final class SellerPatternDtos {
 			String rejectionReason,
 			OffsetDateTime publishedAt,
 			Long pdfFileId,
+			@JsonRawValue String pdfFileIds,
 			List<Image> images,
 			@JsonRawValue String gaugeInfo,
 			@JsonRawValue String sizeInfo,

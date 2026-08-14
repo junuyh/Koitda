@@ -45,6 +45,8 @@ public class SecurityConfig {
 						// 공개 리뷰 목록·상세는 비로그인도 허용(작성·불러오기·수정·삭제는 인증 필요)
 						.requestMatchers(HttpMethod.GET, "/api/v1/patterns/*/reviews", "/api/v1/reviews/*").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/patterns/*/knitting-stats").permitAll()
+						// 문의 목록은 비로그인도 조회 가능(비공개 문의는 서비스에서 마스킹). 작성·답변·수정·삭제는 인증 필요
+						.requestMatchers(HttpMethod.GET, "/api/v1/patterns/*/inquiries").permitAll()
 						// 댓글 수·내용은 비로그인도 조회 가능(SOCIAL-002). 작성·좋아요·팔로우·신고는 인증 필요
 						.requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
 						// 공개 니팅로그의 적용 게이지 계산은 비로그인도 조회 가능(GAUGE-014)

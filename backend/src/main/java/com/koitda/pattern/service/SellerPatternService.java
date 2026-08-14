@@ -106,7 +106,7 @@ public class SellerPatternService {
 				p.getReferenceVideoUrl(), p.getPageCount(), p.getYarnRequirement(), p.getDescription(),
 				p.getDescriptionDocument(),
 				p.getProductStatus().name(), p.getRejectionReason(), p.getPublishedAt(), p.getCurrentFileId(),
-				images, p.getGaugeInfo(), p.getSizeInfo(), p.getNeedleInfo(), p.getTechniqueInfo());
+				p.getPdfFileIds(), images, p.getGaugeInfo(), p.getSizeInfo(), p.getNeedleInfo(), p.getTechniqueInfo());
 	}
 
 	/** 내 도안 목록(GET /seller/patterns). status 문자열은 null 이면 전체. */
@@ -216,6 +216,12 @@ public class SellerPatternService {
 		String techniqueJson = req.technique() == null ? null : objectMapper.writeValueAsString(req.technique());
 		String descDocJson = req.descriptionDocument() == null ? null
 				: objectMapper.writeValueAsString(req.descriptionDocument());
+		// PDF 여러 개: 목록이 오면 그 목록을, 아니면 단일 pdfFileId 를 목록으로. 대표(current)는 첫 번째.
+		java.util.List<Long> pdfList = (req.pdfFileIds() != null && !req.pdfFileIds().isEmpty())
+				? req.pdfFileIds()
+				: (req.pdfFileId() != null ? java.util.List.of(req.pdfFileId()) : null);
+		Long primaryPdf = (pdfList != null && !pdfList.isEmpty()) ? pdfList.get(0) : null;
+		String pdfIdsJson = pdfList == null ? null : objectMapper.writeValueAsString(pdfList);
 		try {
 			p.editDetails(
 					blankToNull(req.title()), blankToNull(req.designerName()), req.categoryId(), req.craftType(),
@@ -223,7 +229,8 @@ public class SellerPatternService {
 					blankToNull(req.productForm()), blankToNull(req.deliveryMethod()), req.availabilityDays(),
 					blankToNull(req.referenceVideoUrl()), req.pageCount(), blankToNull(req.yarnRequirement()),
 					blankToNull(req.description()), descDocJson, gaugeJson, sizeJson, needleJson, techniqueJson,
-					req.pdfFileId());
+					primaryPdf);
+			p.setPdfFileIds(pdfIdsJson);
 		} catch (IllegalStateException e) {
 			throw new ApiException(ErrorCode.INVALID_PATTERN_STATE, "DRAFT·REJECTED 상태에서만 수정할 수 있습니다.");
 		}
@@ -313,6 +320,13 @@ public class SellerPatternService {
 		if (req.pdfFileId() != null && !fileAssetRepository.existsById(req.pdfFileId())) {
 			throw new ApiException(ErrorCode.VALIDATION_ERROR, "존재하지 않는 PDF 파일입니다.");
 		}
+		if (req.pdfFileIds() != null) {
+			for (Long fid : req.pdfFileIds()) {
+				if (fid == null || !fileAssetRepository.existsById(fid)) {
+					throw new ApiException(ErrorCode.VALIDATION_ERROR, "존재하지 않는 PDF 파일입니다.");
+				}
+			}
+		}
 	}
 
 	/** 제출 가능 여부. 사이즈·게이지 누락은 422, 그 외 필수(제목·방식·가격) 누락은 400. */
@@ -357,7 +371,7 @@ public class SellerPatternService {
 		if (req.imageFileIds() == null || req.imageFileIds().isEmpty()) {
 			missing.add("images");
 		}
-		if (req.pdfFileId() == null) {
+		if (req.pdfFileId() == null && (req.pdfFileIds() == null || req.pdfFileIds().isEmpty())) {
 			missing.add("pdf");
 		}
 		return missing;
