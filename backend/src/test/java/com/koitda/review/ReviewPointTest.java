@@ -187,6 +187,48 @@ class ReviewPointTest {
 	}
 
 	@Test
+	void 니팅로그_상세에서_바로_리뷰를_등록하면_사진_별점이_복사된다() throws Exception {
+		long userId = signup("rp-projreview@koitda.dev");
+		MockHttpSession user = login("rp-projreview@koitda.dev");
+		long patternId = seedApprovedPattern("프로젝트리뷰 스웨터");
+		purchase(user, patternId);
+
+		MvcResult proj = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"CATALOG\",\"sellingPatternId\":%d,\"visibility\":\"PUBLIC\"}".formatted(patternId)))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(proj.getResponse().getContentAsString(), "$.id")).longValue();
+
+		Long f1 = jdbc.queryForObject("""
+				INSERT INTO file_asset(uploader_id, usage_type, storage_key, upload_status)
+				VALUES (?, 'PROJECT_IMAGE', 'p/1.jpg', 'COMPLETED') RETURNING id""", Long.class, userId);
+		jdbc.update("INSERT INTO project_image(project_id, file_id, sort_order) VALUES (?,?,0)", projectId, f1);
+
+		// 오늘의 로그 없이 니팅로그(projectId) 기준으로 바로 리뷰 등록
+		mockMvc.perform(post("/api/v1/patterns/" + patternId + "/reviews").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"sourceProjectId\":%d,\"rating\":4}".formatted(projectId)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.earnedPoint").value(500));
+
+		mockMvc.perform(get("/api/v1/patterns/" + patternId + "/reviews").session(user))
+				.andExpect(jsonPath("$.items[0].rating").value(4))
+				.andExpect(jsonPath("$.items[0].images.length()").value(1))
+				.andExpect(jsonPath("$.items[0].images[0]").value("/api/v1/files/" + f1));
+
+		// 남의 니팅로그로는 리뷰 등록 불가(다른 사람 projectId)
+		long otherUserId = signup("rp-projreview-other@koitda.dev");
+		MockHttpSession other = login("rp-projreview-other@koitda.dev");
+		long otherPattern = seedApprovedPattern("남의 프로젝트리뷰");
+		purchase(other, otherPattern);
+		mockMvc.perform(post("/api/v1/patterns/" + otherPattern + "/reviews").with(csrf()).session(other)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"sourceProjectId\":%d,\"rating\":5}".formatted(projectId)))
+				.andExpect(status().isNotFound());
+		org.junit.jupiter.api.Assertions.assertTrue(otherUserId > 0);
+	}
+
+	@Test
 	void 별점이_범위를_벗어나면_400() throws Exception {
 		signup("rp-badrating@koitda.dev");
 		MockHttpSession user = login("rp-badrating@koitda.dev");

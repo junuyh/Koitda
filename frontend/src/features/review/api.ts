@@ -39,6 +39,7 @@ export type LoadableLog = {
 
 export type CreateReviewBody = {
   sourcePostId?: number;
+  sourceProjectId?: number;
   title?: string;
   contentText?: string;
   rating?: number;

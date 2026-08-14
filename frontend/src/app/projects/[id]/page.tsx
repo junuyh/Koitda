@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fileApi } from "@/features/file/api";
 import { projectApi, STATUS_LABEL, type LogItem, type ProjectDetail } from "@/features/project/api";
+import { reviewApi } from "@/features/review/api";
+import { ApiError } from "@/lib/api";
 import { gaugeApi } from "@/features/gauge/api";
 import { GaugeResultView } from "@/features/gauge/GaugeResultView";
 import { RichEditor } from "@/features/editor/RichEditor";
@@ -97,6 +99,12 @@ export default function ProjectDetailPage() {
     queryFn: () => gaugeApi.applied(id),
     retry: false,
   });
+  // 이 니팅로그로 리뷰 등록 가능 여부(내 것 · 코잇다 도안 연결 · 구매함 · 아직 리뷰 안 씀)
+  const reviewStatus = useQuery({
+    queryKey: ["review-status", p?.sellingPatternId],
+    queryFn: () => reviewApi.list(p!.sellingPatternId!),
+    enabled: !!p?.mine && p?.patternType === "CATALOG" && p?.sellingPatternId != null,
+  });
 
   // 오늘의 로그 팝업(모달)로 열린 로그. 리스트가 이미 본문을 담고 있어 추가 조회 없이 연다.
   const [openLog, setOpenLog] = useState<LogItem | null>(null);
@@ -105,6 +113,9 @@ export default function ProjectDetailPage() {
   const [photoOpen, setPhotoOpen] = useState(false); // 대표 이미지 관리 팝업
   const [materialsOpen, setMaterialsOpen] = useState(false); // 재료(실·바늘·게이지) 편집 팝업
   const [logPage, setLogPage] = useState(0); // 로그 리스트 페이지(15개씩)
+  const [reviewOpen, setReviewOpen] = useState(false); // 리뷰로 등록 팝업
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["project", id] });
@@ -143,8 +154,30 @@ export default function ProjectDetailPage() {
     },
   });
 
+  const createReview = useMutation({
+    // 이 니팅로그를 리뷰로 등록 — 대표 사진·상태가 자동 복사되고 별점이 함께 저장된다.
+    mutationFn: () => reviewApi.create(p!.sellingPatternId!, {
+      sourceProjectId: id, rating: reviewRating,
+      contentText: reviewComment.trim() || undefined, visibility: "PUBLIC",
+    }),
+    onSuccess: async (res) => {
+      setReviewOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["review-status", p!.sellingPatternId] });
+      await queryClient.invalidateQueries({ queryKey: ["reviews", p!.sellingPatternId] });
+      window.alert(res.earnedPoint > 0
+        ? `리뷰가 등록되고 ${res.earnedPoint.toLocaleString()}P가 적립되었습니다!`
+        : "리뷰가 등록되었습니다.");
+      router.push(`/patterns/${p!.sellingPatternId}`);
+    },
+    onError: (e) => window.alert(e instanceof ApiError ? e.message : "리뷰 등록 중 오류가 발생했습니다."),
+  });
+
   if (isLoading) return <Centered>불러오는 중…</Centered>;
   if (isError || !p) return <Centered>니팅로그를 찾을 수 없습니다.</Centered>;
+
+  const canReview = !!p.mine && p.patternType === "CATALOG"
+    && reviewStatus.data?.purchased === true && !reviewStatus.data?.myReviewId;
+  const alreadyReviewed = reviewStatus.data?.myReviewId != null;
 
   const snap = p.patternSnapshot;
   const measureKeys = snap?.sizes?.[0] ? Object.keys(snap.sizes[0].measurements) : [];
@@ -179,6 +212,21 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* 이 니팅로그로 바로 리뷰 등록(작성자·코잇다 도안·구매·미작성일 때) */}
+      {canReview && (
+        <button type="button" onClick={() => { setReviewRating(5); setReviewComment(""); setReviewOpen(true); }}
+          className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-neutral-900 bg-amber-400 px-5 py-3 text-left font-black text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100">
+          <span>⭐ 이 니팅로그를 도안 리뷰로 등록하기</span>
+          <span className="text-sm">사진·별점 함께 등록 →</span>
+        </button>
+      )}
+      {p.mine && alreadyReviewed && (
+        <Link href={`/patterns/${p.sellingPatternId}`}
+          className="mt-4 block rounded-2xl border-2 border-neutral-200 px-5 py-3 text-sm font-bold text-neutral-500 dark:border-neutral-800">
+          ✅ 이 도안에 리뷰를 작성했어요 · 도안에서 보기 →
+        </Link>
+      )}
 
       <div className="mt-4 space-y-4">
         {/* Notion 페이지형 헤더: 커버(대표 이미지) + 제목 + 속성 행 */}
@@ -483,6 +531,47 @@ export default function ProjectDetailPage() {
       {materialsOpen && (
         <MaterialsModal projectId={id} yarns={p.yarns} needles={p.needles} gauges={p.gauges}
           onClose={() => setMaterialsOpen(false)} onSaved={() => { invalidate(); setMaterialsOpen(false); }} />
+      )}
+
+      {reviewOpen && (
+        <Modal onClose={() => setReviewOpen(false)}>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-black tracking-tight">이 로그를 리뷰로 등록</h3>
+            <button type="button" onClick={() => setReviewOpen(false)} aria-label="닫기"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">✕</button>
+          </div>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+            이 니팅로그를 「{patternLabel}」 도안 리뷰로 등록하시겠습니까?<br />
+            <span className="text-xs text-neutral-400">대표 사진과 제작 상태가 리뷰에 함께 등록됩니다.</span>
+          </p>
+
+          <div className="mt-4">
+            <span className="mb-1 block text-xs font-bold text-neutral-500">별점</span>
+            <div className="flex items-center gap-1" role="radiogroup" aria-label="별점">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button" onClick={() => setReviewRating(n)} aria-label={`${n}점`}
+                  className={`text-3xl leading-none transition ${n <= reviewRating ? "text-amber-400" : "text-neutral-300 dark:text-neutral-600"}`}>★</button>
+              ))}
+              <span className="ml-2 text-sm font-bold text-neutral-500">{reviewRating}.0</span>
+            </div>
+          </div>
+
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs font-bold text-neutral-500">한줄평 (선택)</span>
+            <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows={2}
+              placeholder="예: 설명이 자세해서 초보도 완성했어요!"
+              className="w-full resize-none rounded-lg border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm outline-none dark:border-neutral-100" />
+          </label>
+
+          <div className="mt-5 flex gap-3">
+            <button type="button" onClick={() => setReviewOpen(false)}
+              className="w-1/2 rounded-full border-2 border-neutral-900 px-3 py-2.5 text-sm font-bold dark:border-neutral-100">취소</button>
+            <button type="button" onClick={() => createReview.mutate()} disabled={createReview.isPending}
+              className="w-1/2 rounded-full border-2 border-neutral-900 bg-amber-400 px-3 py-2.5 text-sm font-black text-neutral-900 disabled:opacity-50 dark:border-neutral-100">
+              {createReview.isPending ? "등록 중…" : "리뷰 등록 · 포인트 받기"}
+            </button>
+          </div>
+        </Modal>
       )}
     </main>
   );

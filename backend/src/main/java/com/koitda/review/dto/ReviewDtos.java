@@ -10,9 +10,15 @@ public final class ReviewDtos {
 	private ReviewDtos() {
 	}
 
-	/** 리뷰 작성(REVIEW-004). sourcePostId 가 있으면 그 로그 본문·사진을 복사, 없으면 신규 작성. rating 1~5(선택). */
+	/**
+	 * 리뷰 작성(REVIEW-004).
+	 *  · sourcePostId: 오늘의 로그를 불러와 본문·상태를 복사(그 로그의 니팅로그 사진도 복사).
+	 *  · sourceProjectId: 니팅로그 상세에서 바로 등록 — 그 니팅로그의 대표 사진·상태를 복사.
+	 *  · 둘 다 없으면 신규 작성. rating 1~5(선택).
+	 */
 	public record CreateReviewRequest(
 			Long sourcePostId,
+			Long sourceProjectId,
 			String title,
 			String contentText,
 			Integer rating,

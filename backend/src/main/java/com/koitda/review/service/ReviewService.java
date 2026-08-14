@@ -107,6 +107,18 @@ public class ReviewService {
 			if (contentText == null) {
 				contentText = post.getContentText();
 			}
+		} else if (req.sourceProjectId() != null) {
+			// 니팅로그 상세에서 바로 등록: 그 니팅로그(본인·이 도안 연결)의 대표 사진·상태를 복사.
+			KnittingProject project = projectRepository.findByIdAndUserId(req.sourceProjectId(), userId)
+					.orElseThrow(() -> new ApiException(ErrorCode.PROJECT_NOT_FOUND, "니팅로그를 찾을 수 없습니다."));
+			if (!patternId.equals(project.getSellingPatternId())) {
+				throw new ApiException(ErrorCode.ACCESS_DENIED, "이 도안에 연결된 니팅로그만 리뷰로 등록할 수 있습니다.");
+			}
+			sourceProjectId = project.getId();
+			knittingStatus = project.getStatus() != null ? project.getStatus().name() : null;
+			if (title == null) {
+				title = project.getTitle() != null ? project.getTitle() : project.getDisplayTitle();
+			}
 		}
 
 		Integer rating = validateRating(req.rating());
