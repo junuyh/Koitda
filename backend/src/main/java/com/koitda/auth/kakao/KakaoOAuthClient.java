@@ -91,15 +91,30 @@ public class KakaoOAuthClient {
 		} catch (Exception e) {
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 프로필 조회에 실패했습니다.");
 		}
+		return parseProfile(body);
+	}
+
+	/**
+	 * 카카오 /v2/user/me 응답 파싱. 동의 항목에 따라 필드가 없을 수 있어 방어적으로 읽는다.
+	 *  · 이메일: 비즈앱 심사 전에는 권한이 없어 대개 null — 그대로 null 을 허용한다(가입 가능).
+	 *  · 닉네임: 앱 설정에 따라 kakao_account.profile.nickname 또는 레거시 properties.nickname 에 온다.
+	 */
+	public static KakaoProfile parseProfile(JsonNode body) {
 		if (body == null || body.get("id") == null) {
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 프로필을 받지 못했습니다.");
 		}
 		String uid = body.get("id").asString();
+
 		JsonNode account = body.get("kakao_account");
 		String email = (account != null && account.hasNonNull("email")) ? account.get("email").asString() : null;
+
 		String nickname = null;
 		if (account != null && account.get("profile") != null && account.get("profile").hasNonNull("nickname")) {
 			nickname = account.get("profile").get("nickname").asString();
+		}
+		// 레거시/대체 위치: properties.nickname
+		if (nickname == null && body.get("properties") != null && body.get("properties").hasNonNull("nickname")) {
+			nickname = body.get("properties").get("nickname").asString();
 		}
 		return new KakaoProfile(uid, email, nickname);
 	}

@@ -5,11 +5,12 @@ export type AuthUser = { id: number; nickname: string; roles: string[] };
 
 export type Me = {
   id: number;
-  email: string;
+  email: string | null; // 카카오(이메일 미동의) 회원은 이메일이 없다
   nickname: string;
   intro: string | null;
   pointBalance: number;
   roles: string[];
+  hasPassword: boolean; // 소셜 전용 회원은 false → 비밀번호 변경 UI 숨김
 };
 
 // 화면 입력을 서버 계약(agreements 배열)으로 변환한다.

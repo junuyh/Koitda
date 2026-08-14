@@ -35,7 +35,7 @@ export default function SettingsPage() {
         <form onSubmit={(e) => { e.preventDefault(); if (nickname.trim()) save.mutate(); }} className="space-y-4">
           <label className="block">
             <span className="mb-1 block text-xs font-bold text-neutral-500">이메일</span>
-            <input value={me?.email ?? ""} disabled
+            <input value={me?.email ?? "카카오 로그인 (이메일 없음)"} disabled
               className="w-full rounded-xl border-2 border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-400 dark:border-neutral-800 dark:bg-neutral-900" />
           </label>
           <label className="block">
@@ -54,7 +54,8 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <PasswordSection email={me?.email ?? ""} />
+      {/* 소셜 전용 회원(카카오)은 비밀번호가 없어 변경 UI 를 감춘다. */}
+      {me?.hasPassword && <PasswordSection email={me?.email ?? ""} />}
     </main>
   );
 }
