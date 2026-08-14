@@ -31,9 +31,26 @@ public final class GaugeCalculator {
 		return BigDecimal.valueOf(v).setScale(1, RoundingMode.HALF_UP).doubleValue();
 	}
 
-	/** 길이 계열(총장·소매길이)은 단(rows) 비율, 나머지(가슴둘레·어깨너비)는 코(stitches) 비율로 환산한다. */
+	/** 세로(길이) 항목으로 볼 한글 키워드. 이 항목들은 단(rows) 게이지로 환산한다. */
+	private static final String[] LENGTH_KEYWORDS_KO = {"총장", "기장", "길이", "밑위", "총기장"};
+
+	/**
+	 * 길이(세로) 계열이면 단(rows) 비율, 나머지(둘레·너비 등 가로)는 코(stitches) 비율로 환산한다.
+	 * 영문 키(lengthCm…)와 자유 실측 한글 라벨(총장·소매길이·밑위 등)을 모두 인식한다.
+	 */
 	private static boolean isLength(String key) {
-		return key != null && key.toLowerCase().contains("length");
+		if (key == null) {
+			return false;
+		}
+		if (key.toLowerCase().contains("length")) {
+			return true;
+		}
+		for (String w : LENGTH_KEYWORDS_KO) {
+			if (key.contains(w)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static final Map<String, String> SHORT_LABEL = Map.of(
