@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { authApi } from "@/features/auth/api";
+import Footer from "@/components/Footer";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; role?: "SELLER" | "ADMIN" };
 
@@ -141,6 +142,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         {children}
+
+        {/* 전역 푸터(약관·개인정보). 로그인/회원가입 등 인증 화면은 깔끔하게 제외. */}
+        {!authPage && <Footer />}
       </div>
     </div>
   );
