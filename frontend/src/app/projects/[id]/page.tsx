@@ -813,7 +813,8 @@ function QuickLogForm({
   const [title, setTitle] = useState(edit?.displayTitle ?? "");
   const [docJson, setDocJson] = useState<JSONContent | null>((edit?.contentDocument as JSONContent) ?? null);
   const [docText, setDocText] = useState(edit?.comment ?? "");
-  const [makePublic, setMakePublic] = useState(false);
+  // 수정 모드에선 현재 로그 공개값으로 초기화(작성 모드는 비공개 기본).
+  const [makePublic, setMakePublic] = useState(edit?.visibility === "PUBLIC");
   const [editorKey, setEditorKey] = useState(0); // 제출 후 에디터 초기화용
 
   useEffect(() => { if (!isEdit) setStatus(currentStatus === "PLANNED" ? "CO" : currentStatus); }, [currentStatus, isEdit]);
@@ -828,7 +829,15 @@ function QuickLogForm({
         contentDocument: hasBody ? (docJson ?? undefined) : undefined,
       };
       if (isEdit) {
-        await projectApi.updateLog(projectId, edit!.id, body);
+        // 개별 로그 공개/비공개 변경 반영. 공개로 바꾸는데 니팅로그가 비공개면 함께 공개 확인.
+        const updateBody: Parameters<typeof projectApi.updateLog>[2] = {
+          ...body, visibility: makePublic ? "PUBLIC" : "PRIVATE",
+        };
+        if (makePublic && edit!.visibility !== "PUBLIC" && projectVisibility === "PRIVATE") {
+          if (!window.confirm("이 니팅로그는 비공개입니다. 로그를 공개하면 니팅로그도 함께 공개됩니다. 함께 공개할까요?")) return;
+          updateBody.publishProjectConfirmed = true;
+        }
+        await projectApi.updateLog(projectId, edit!.id, updateBody);
         return;
       }
       const createBody: Parameters<typeof projectApi.createLog>[1] = { ...body };
@@ -840,7 +849,8 @@ function QuickLogForm({
       }
       await projectApi.createLog(projectId, createBody);
     },
-    onSuccess: () => { if (!isEdit) { setTitle(""); setDocJson(null); setDocText(""); setEditorKey((k) => k + 1); } setMakePublic(false); onDone(); },
+    onSuccess: () => { if (!isEdit) { setTitle(""); setDocJson(null); setDocText(""); setEditorKey((k) => k + 1); setMakePublic(false); } onDone(); },
+    onError: (e) => window.alert(e instanceof ApiError ? e.message : "저장 중 오류가 발생했습니다."),
   });
 
   return (
@@ -850,12 +860,10 @@ function QuickLogForm({
           className="rounded-full border-2 border-neutral-900 bg-transparent px-3 py-2 text-sm dark:border-neutral-100">
           {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
-        {!isEdit && (
-          <label className="flex items-center gap-2 text-xs text-neutral-500">
-            <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
-            이 로그 공개
-          </label>
-        )}
+        <label className="flex items-center gap-2 text-xs text-neutral-500">
+          <input type="checkbox" checked={makePublic} onChange={(e) => setMakePublic(e.target.checked)} className="h-3.5 w-3.5" />
+          이 로그 공개
+        </label>
       </div>
       <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60}
         placeholder="제목 (비우면 날짜로 자동 지정)" aria-label="로그 제목"

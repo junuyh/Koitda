@@ -92,9 +92,39 @@ public class LogService {
 				: objectMapper.writeValueAsString(req.contentDocument());
 
 		post.editLog(req.knittingStatus(), req.title(), displayTitle, req.comment(), contentDocumentJson);
+
+		// 개별 로그 공개/비공개 변경(POST-011). 미지정(null)이면 기존 유지.
+		if (req.visibility() != null && req.visibility() != post.getVisibility()) {
+			applyLogVisibilityChange(project, post, req.visibility(), req.publishProjectConfirmed());
+		}
+
 		recomputeStatus(project);
 		projectRepository.save(project);
 		return LogResponse.from(post);
+	}
+
+	/**
+	 * 로그 공개/비공개 전환.
+	 *  · PUBLIC→PRIVATE: 항상 허용, 공개 카운트 감소.
+	 *  · PRIVATE→PUBLIC: 니팅로그가 공개여야 함. 비공개면 확인 시 함께 공개(상향 전파), 아니면 거부.
+	 */
+	private void applyLogVisibilityChange(KnittingProject project, ContentPost post,
+			ProjectVisibility target, boolean publishProjectConfirmed) {
+		if (target == ProjectVisibility.PRIVATE) {
+			post.changeVisibility(ProjectVisibility.PRIVATE);
+			project.decreasePublicLogCount();
+			return;
+		}
+		// target == PUBLIC
+		if (project.getVisibility() == ProjectVisibility.PRIVATE) {
+			if (!publishProjectConfirmed) {
+				throw new ApiException(ErrorCode.CONFIRMATION_REQUIRED,
+						"이 니팅로그는 비공개입니다. 로그를 공개하려면 니팅로그도 함께 공개해야 합니다.");
+			}
+			project.publish();
+		}
+		post.changeVisibility(ProjectVisibility.PUBLIC);
+		project.increasePublicLogCount();
 	}
 
 	/** 오늘의 로그 삭제(논리 삭제). 공개 로그면 공개 카운트 감소, 상태 재계산. */

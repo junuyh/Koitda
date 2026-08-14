@@ -109,7 +109,10 @@ export const projectApi = {
   updateLog: (
     projectId: number,
     postId: number,
-    body: { knittingStatus: string; title?: string; comment?: string; contentDocument?: unknown },
+    body: {
+      knittingStatus: string; title?: string; comment?: string; contentDocument?: unknown;
+      visibility?: "PRIVATE" | "PUBLIC"; publishProjectConfirmed?: boolean;
+    },
   ) => apiFetch<LogItem>(`/projects/${projectId}/posts/${postId}`, { method: "PATCH", body }),
   deleteLog: (projectId: number, postId: number) =>
     apiFetch<null>(`/projects/${projectId}/posts/${postId}`, { method: "DELETE" }),

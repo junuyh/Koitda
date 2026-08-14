@@ -105,6 +105,11 @@ public class ContentPost {
 		this.contentDocument = contentDocument;
 	}
 
+	/** 로그 개별 공개/비공개 변경(POST-011). 프로젝트 공개 카운트 갱신은 서비스가 담당. */
+	public void changeVisibility(ProjectVisibility visibility) {
+		this.visibility = visibility;
+	}
+
 	/** 논리 삭제(휴지통이 아닌 개별 로그 삭제 — 즉시 목록에서 제외). */
 	public void softDelete() {
 		this.deletedAt = OffsetDateTime.now();

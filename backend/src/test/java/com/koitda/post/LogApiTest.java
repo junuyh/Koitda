@@ -84,6 +84,72 @@ class LogApiTest {
 	}
 
 	@Test
+	void 로그_공개비공개를_수정에서_되돌릴수있다() throws Exception {
+		MockHttpSession owner = loginSession("logvis-owner@koitda.dev");
+		MvcResult r = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"EXTERNAL\",\"externalPattern\":{\"title\":\"공개도안\"},\"visibility\":\"PUBLIC\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(r.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 공개 로그 작성
+		MvcResult log = mockMvc.perform(post("/api/v1/projects/" + projectId + "/posts").with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"comment\":\"공개로그\",\"visibility\":\"PUBLIC\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.logVisibility").value("PUBLIC")).andReturn();
+		long postId = ((Number) JsonPath.read(log.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 수정에서 비공개로 되돌리기(사용자 신고 케이스)
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.patch("/api/v1/projects/" + projectId + "/posts/" + postId).with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"visibility\":\"PRIVATE\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PRIVATE"));
+
+		// 목록에도 비공개 반영
+		mockMvc.perform(get("/api/v1/projects/" + projectId + "/posts").session(owner))
+				.andExpect(jsonPath("$[0].visibility").value("PRIVATE"));
+
+		// 다시 공개로(프로젝트가 공개라 확인 불필요)
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.patch("/api/v1/projects/" + projectId + "/posts/" + postId).with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"visibility\":\"PUBLIC\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PUBLIC"));
+	}
+
+	@Test
+	void 비공개_니팅로그의_로그를_공개로_바꾸려면_확인이_필요하다_428() throws Exception {
+		MockHttpSession owner = loginSession("logvis-private@koitda.dev");
+		long projectId = createExternalProject(owner); // 기본 비공개
+		MvcResult log = mockMvc.perform(post("/api/v1/projects/" + projectId + "/posts").with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"comment\":\"비공개로그\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		long postId = ((Number) JsonPath.read(log.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 확인 없이 공개 시도 → 428
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.patch("/api/v1/projects/" + projectId + "/posts/" + postId).with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"visibility\":\"PUBLIC\"}"))
+				.andExpect(status().is(428));
+
+		// 확인하면 로그·니팅로그 함께 공개
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.patch("/api/v1/projects/" + projectId + "/posts/" + postId).with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"visibility\":\"PUBLIC\",\"publishProjectConfirmed\":true}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PUBLIC"));
+		mockMvc.perform(get("/api/v1/projects/" + projectId).session(owner))
+				.andExpect(jsonPath("$.visibility").value("PUBLIC"));
+	}
+
+	@Test
 	void 공개_니팅로그는_작성자만_편집할수있다() throws Exception {
 		// 소유자: 공개 외부 니팅로그 생성
 		MockHttpSession owner = loginSession("owner-log@koitda.dev");
