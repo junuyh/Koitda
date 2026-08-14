@@ -18,11 +18,14 @@ export function GaugeResultView({
   const g = result.gaugeAdjustment;
   return (
     <div>
-      <div className="rounded-2xl border-2 border-neutral-900 p-4 dark:border-neutral-100">
-        <p className="text-xs text-neutral-500">조정 시작 콧수</p>
-        <p className="mt-0.5 text-2xl font-black">{g.adjustedCastOnStitches}<span className="ml-1 text-base font-normal text-neutral-400">코</span></p>
-        <p className="mt-1 font-mono text-xs text-neutral-400">{g.formula}</p>
-      </div>
+      {/* 조정 시작 콧수는 도안에 시작 콧수가 있을 때만. 없으면 아래 '부위별 필요 콧수'(치수 기준)가 실계산이다. */}
+      {g.adjustedCastOnStitches != null && (
+        <div className="rounded-2xl border-2 border-neutral-900 p-4 dark:border-neutral-100">
+          <p className="text-xs text-neutral-500">조정 시작 콧수</p>
+          <p className="mt-0.5 text-2xl font-black">{g.adjustedCastOnStitches}<span className="ml-1 text-base font-normal text-neutral-400">코</span></p>
+          <p className="mt-1 font-mono text-xs text-neutral-400">{g.formula}</p>
+        </div>
+      )}
 
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px] text-sm">

@@ -60,6 +60,47 @@ class GaugeCalcTest {
 				""", Long.class, sid);
 	}
 
+	/** 시작 콧수 없이 완성 치수만 있는 도안(시작 콧수는 선택 항목). */
+	private long seedPatternNoCastOn() {
+		String brand = "노시작콧수공방_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+		Long su = jdbc.queryForObject("INSERT INTO users(nickname) VALUES (?) RETURNING id", Long.class, brand);
+		Long sid = jdbc.queryForObject(
+				"INSERT INTO seller_profile(user_id, brand_name) VALUES (?, ?) RETURNING id", Long.class, su, brand);
+		return jdbc.queryForObject("""
+				INSERT INTO selling_pattern (seller_id, title, craft_type, regular_price, sale_price, product_status, published_at, gauge_info, size_info)
+				VALUES (?, '치수만 스웨터', 'KNIT', 10000, 10000, 'APPROVED', now(),
+				  '{"stitches":22,"rows":30,"swatchWidthCm":10,"swatchHeightCm":10,"needleSizeMm":4.5}'::jsonb,
+				  '{"sizes":[{"label":"2 (M)","measurements":{"chestCm":106,"lengthCm":60,"sleeveLengthCm":47}}]}'::jsonb)
+				RETURNING id
+				""", Long.class, sid);
+	}
+
+	@Test
+	void 시작콧수가_없어도_치수기준으로_게이지_계산이_된다() throws Exception {
+		signup("gauge-nocaston@koitda.dev");
+		MockHttpSession user = login("gauge-nocaston@koitda.dev");
+		long patternId = seedPatternNoCastOn();
+
+		MvcResult proj = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"CATALOG\",\"sellingPatternId\":%d,\"visibility\":\"PRIVATE\"}".formatted(patternId)))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(proj.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 시작 콧수가 없어도 계산 성공(422 아님). 조정 콧수는 null, 필요 콧수(치수 기준)는 계산됨.
+		mockMvc.perform(post("/api/v1/gauge/calculations").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"projectId":%d,"patternGauge":{"stitches":22,"rows":30,"needleSizeMm":4.5},
+						 "myGauge":{"stitches":24,"rows":32},"selectedSizeLabel":"2 (M)",
+						 "targetMeasurements":{"chestCm":111}}
+						""".formatted(projectId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.gaugeAdjustment.adjustedCastOnStitches").value(org.hamcrest.Matchers.nullValue()))
+				.andExpect(jsonPath("$.sizeAdjustments[0].key").value("chestCm"))
+				.andExpect(jsonPath("$.sizeAdjustments[0].requiredStitches").value(266));
+	}
+
 	@Test
 	void 도안_연결_니팅로그에서_게이지_계산을_실행하고_적용한다() throws Exception {
 		signup("gauge-user@koitda.dev");

@@ -49,11 +49,16 @@ public final class GaugeCalculator {
 		Map<String, Double> patternMeas = (size.measurements() == null) ? Map.of() : size.measurements();
 
 		// --- 1단계: 조정 콧수(GAUGE-006) ---
-		int patternCastOn = size.castOnStitches() != null ? size.castOnStitches() : 0;
-		double adjRaw = patternCastOn * (ms / ps);
-		int adjustedCastOn = roundInt(adjRaw);
-		String stage1Formula = "%d × (%s ÷ %s) = %s → %d".formatted(
-				patternCastOn, trim(ms), trim(ps), trim(round2(adjRaw)), adjustedCastOn);
+		// 도안에 시작 콧수가 있을 때만 계산한다. 없으면 null — 실제 계산은 치수 기준(2단계)이라 무관하다.
+		Integer adjustedCastOn = null;
+		String stage1Formula = null;
+		if (size.castOnStitches() != null && size.castOnStitches() > 0) {
+			int patternCastOn = size.castOnStitches();
+			double adjRaw = patternCastOn * (ms / ps);
+			adjustedCastOn = roundInt(adjRaw);
+			stage1Formula = "%d × (%s ÷ %s) = %s → %d".formatted(
+					patternCastOn, trim(ms), trim(ps), trim(round2(adjRaw)), adjustedCastOn);
+		}
 
 		// 예상 완성 치수(GAUGE-007): 도안 콧수를 내 게이지로 떴을 때. 폭=코비율, 길이=단비율.
 		Map<String, Double> estimated = new LinkedHashMap<>();

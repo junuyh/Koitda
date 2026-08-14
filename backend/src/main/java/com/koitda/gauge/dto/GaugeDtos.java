@@ -36,9 +36,9 @@ public final class GaugeDtos {
 			Map<String, Double> targetMeasurements) {
 	}
 
-	/** 1단계 — 조정 콧수·예상 완성 치수(GAUGE-006·007). */
+	/** 1단계 — 조정 콧수·예상 완성 치수(GAUGE-006·007). 도안에 시작 콧수가 없으면 조정 콧수는 null(계산은 치수 기준으로 진행). */
 	public record GaugeAdjustment(
-			int adjustedCastOnStitches,
+			Integer adjustedCastOnStitches,
 			Map<String, Double> estimatedMeasurements,
 			Map<String, Double> differenceFromPattern,
 			String formula) {

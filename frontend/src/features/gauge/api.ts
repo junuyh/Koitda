@@ -14,7 +14,7 @@ export type GaugeDefaults = {
 };
 
 export type GaugeAdjustment = {
-  adjustedCastOnStitches: number;
+  adjustedCastOnStitches: number | null; // 도안에 시작 콧수가 없으면 null(계산은 치수 기준)
   estimatedMeasurements: Record<string, number>;
   differenceFromPattern: Record<string, number>;
   formula: string;

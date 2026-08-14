@@ -76,8 +76,9 @@ public class GaugeService {
 
 		requirePositive(patternGauge, "도안 게이지");
 		requirePositive(myGauge, "내 게이지");
-		if (size == null || size.castOnStitches() == null) {
-			throw new ApiException(ErrorCode.GAUGE_INPUT_REQUIRED, "도안 사이즈(시작 콧수)가 필요합니다.");
+		// 계산은 '치수 × 내 게이지' 기준(GAUGE-011)이라 시작 콧수는 필요 없다. 완성 치수가 있는 사이즈만 있으면 된다.
+		if (size == null || size.measurements() == null || size.measurements().isEmpty()) {
+			throw new ApiException(ErrorCode.GAUGE_INPUT_REQUIRED, "완성 치수가 있는 도안 사이즈를 선택하세요.");
 		}
 
 		Map<String, String> labels = measurementLabels(List.of(size));
