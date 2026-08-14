@@ -46,7 +46,8 @@ class KakaoSocialLoginTest {
 		@Bean
 		@Primary
 		KakaoOAuthClient fakeKakaoClient() {
-			return new KakaoOAuthClient("test-client", "", "http://localhost:3000/auth/kakao/callback") {
+			return new KakaoOAuthClient("test-client", "", "http://localhost:3000/auth/kakao/callback",
+					new tools.jackson.databind.ObjectMapper()) {
 				@Override
 				public boolean isConfigured() {
 					return true;

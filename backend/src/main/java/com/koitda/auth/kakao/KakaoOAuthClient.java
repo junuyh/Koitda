@@ -2,12 +2,15 @@ package com.koitda.auth.kakao;
 
 import com.koitda.common.error.ApiException;
 import com.koitda.common.error.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.JsonNode;
 
@@ -19,6 +22,7 @@ import tools.jackson.databind.JsonNode;
 @Component
 public class KakaoOAuthClient {
 
+	private static final Logger log = LoggerFactory.getLogger(KakaoOAuthClient.class);
 	private static final String AUTH_URL = "https://kauth.kakao.com/oauth/authorize";
 	private static final String TOKEN_URL = "https://kauth.kakao.com/oauth/token";
 	private static final String PROFILE_URL = "https://kapi.kakao.com/v2/user/me";
@@ -27,14 +31,17 @@ public class KakaoOAuthClient {
 	private final String clientSecret;
 	private final String redirectUri;
 	private final RestClient restClient = RestClient.create();
+	private final tools.jackson.databind.ObjectMapper objectMapper;
 
 	public KakaoOAuthClient(
 			@Value("${kakao.client-id:}") String clientId,
 			@Value("${kakao.client-secret:}") String clientSecret,
-			@Value("${kakao.redirect-uri:http://localhost:3000/auth/kakao/callback}") String redirectUri) {
+			@Value("${kakao.redirect-uri:http://localhost:3000/auth/kakao/callback}") String redirectUri,
+			tools.jackson.databind.ObjectMapper objectMapper) {
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
 		this.redirectUri = redirectUri;
+		this.objectMapper = objectMapper;
 	}
 
 	public boolean isConfigured() {
@@ -63,17 +70,25 @@ public class KakaoOAuthClient {
 		if (clientSecret != null && !clientSecret.isBlank()) {
 			form.add("client_secret", clientSecret);
 		}
-		JsonNode body;
+		String raw;
 		try {
-			body = restClient.post().uri(TOKEN_URL)
+			// 컨버터 설정에 의존하지 않도록 문자열로 받아 Jackson 3 으로 직접 파싱한다.
+			raw = restClient.post().uri(TOKEN_URL)
 					.contentType(MediaType.APPLICATION_FORM_URLENCODED)
 					.body(form)
 					.retrieve()
-					.body(JsonNode.class);
+					.body(String.class);
+		} catch (RestClientResponseException e) {
+			// 카카오가 4xx/5xx 로 준 에러 본문(error, error_description)을 로그로 남긴다 — 원인 진단용.
+			log.warn("카카오 토큰 교환 실패: status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
+			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 인증에 실패했습니다.");
 		} catch (Exception e) {
+			log.warn("카카오 토큰 교환 중 오류", e);
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 인증에 실패했습니다.");
 		}
+		JsonNode body = readTree(raw);
 		if (body == null || body.get("access_token") == null) {
+			log.warn("카카오 토큰 응답에 access_token 없음: {}", raw);
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 토큰을 받지 못했습니다.");
 		}
 		return body.get("access_token").asString();
@@ -82,16 +97,29 @@ public class KakaoOAuthClient {
 	/** 액세스 토큰 → 카카오 프로필(회원번호·이메일·닉네임). */
 	public KakaoProfile fetchProfile(String accessToken) {
 		requireConfigured();
-		JsonNode body;
+		String raw;
 		try {
-			body = restClient.get().uri(PROFILE_URL)
+			raw = restClient.get().uri(PROFILE_URL)
 					.header("Authorization", "Bearer " + accessToken)
 					.retrieve()
-					.body(JsonNode.class);
+					.body(String.class);
+		} catch (RestClientResponseException e) {
+			log.warn("카카오 프로필 조회 실패: status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
+			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 프로필 조회에 실패했습니다.");
 		} catch (Exception e) {
+			log.warn("카카오 프로필 조회 중 오류", e);
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 프로필 조회에 실패했습니다.");
 		}
-		return parseProfile(body);
+		return parseProfile(readTree(raw));
+	}
+
+	private JsonNode readTree(String raw) {
+		try {
+			return raw == null ? null : objectMapper.readTree(raw);
+		} catch (Exception e) {
+			log.warn("카카오 응답 JSON 파싱 실패: {}", raw);
+			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "카카오 응답을 해석하지 못했습니다.");
+		}
 	}
 
 	/**
