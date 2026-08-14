@@ -10,11 +10,12 @@ public final class ReviewDtos {
 	private ReviewDtos() {
 	}
 
-	/** 리뷰 작성(REVIEW-004). sourcePostId 가 있으면 그 로그 본문을 복사, 없으면 신규 작성. */
+	/** 리뷰 작성(REVIEW-004). sourcePostId 가 있으면 그 로그 본문·사진을 복사, 없으면 신규 작성. rating 1~5(선택). */
 	public record CreateReviewRequest(
 			Long sourcePostId,
 			String title,
 			String contentText,
+			Integer rating,
 			String visibility) {
 	}
 
@@ -30,10 +31,11 @@ public final class ReviewDtos {
 	public record UpdateReviewRequest(
 			String title,
 			String contentText,
+			Integer rating,
 			String visibility) {
 	}
 
-	/** 리뷰 목록 한 줄(REVIEW-001·009). 좋아요·댓글 수는 실시간 집계. */
+	/** 리뷰 목록 한 줄(REVIEW-001·009). 좋아요·댓글 수는 실시간 집계. images 는 로그에서 복사한 사진 URL. */
 	public record ReviewItem(
 			Long id,
 			String authorNickname,
@@ -41,6 +43,8 @@ public final class ReviewDtos {
 			String contentText,
 			String knittingStatus,
 			String gaugeAdjustmentSummary,
+			Integer rating,
+			List<String> images,
 			long likeCount,
 			long commentCount,
 			boolean liked,
@@ -64,6 +68,8 @@ public final class ReviewDtos {
 			@JsonRawValue String contentDocument,
 			String knittingStatus,
 			String gaugeAdjustmentSummary,
+			Integer rating,
+			List<String> images,
 			String visibility,
 			boolean mine,
 			OffsetDateTime createdAt) {

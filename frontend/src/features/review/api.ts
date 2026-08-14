@@ -7,6 +7,8 @@ export type ReviewItem = {
   contentText: string | null;
   knittingStatus: string | null;
   gaugeAdjustmentSummary: string | null;
+  rating: number | null;
+  images: string[];
   likeCount: number;
   commentCount: number;
   liked: boolean;
@@ -39,6 +41,7 @@ export type CreateReviewBody = {
   sourcePostId?: number;
   title?: string;
   contentText?: string;
+  rating?: number;
   visibility?: "PUBLIC" | "PRIVATE";
 };
 

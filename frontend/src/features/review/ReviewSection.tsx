@@ -35,7 +35,15 @@ export function ReviewSection({ patternId, loggedIn }: { patternId: number; logg
   return (
     <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">리뷰 {data ? `(${data.items.length})` : ""}</h2>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">리뷰 {data ? `(${data.items.length})` : ""}</h2>
+          {(() => {
+            const rated = data?.items.filter((r) => r.rating != null) ?? [];
+            if (rated.length === 0) return null;
+            const avg = rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length;
+            return <span className="text-sm font-bold text-amber-500">★ {avg.toFixed(1)} <span className="text-xs font-normal text-neutral-400">({rated.length})</span></span>;
+          })()}
+        </div>
         {canWrite && (
           <Link href={`/patterns/${patternId}/reviews/new`}
             className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
@@ -100,8 +108,24 @@ function Row({ r, patternId, loggedIn, onDelete, deleting }: {
             className="text-xs text-red-500 hover:underline disabled:opacity-50">삭제</button>
         )}
       </div>
+      {r.rating != null && (
+        <p className="mt-1.5 text-sm" aria-label={`별점 ${r.rating}점`}>
+          <span className="text-amber-400">{"★".repeat(r.rating)}</span>
+          <span className="text-neutral-300 dark:text-neutral-600">{"★".repeat(5 - r.rating)}</span>
+          <span className="ml-1 align-middle text-xs font-bold text-neutral-500">{r.rating}.0</span>
+        </p>
+      )}
       {r.title && <p className="mt-1.5 text-sm font-medium">{r.title}</p>}
       {r.contentText && <p className="mt-1 whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-300">{r.contentText}</p>}
+      {r.images.length > 0 && (
+        <div className="mt-2 flex gap-2 overflow-x-auto">
+          {r.images.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={src} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="h-24 w-24 shrink-0 rounded-lg border border-neutral-200 object-cover dark:border-neutral-800" />
+          ))}
+        </div>
+      )}
       {r.gaugeAdjustmentSummary && (
         <p className="mt-2 inline-block rounded bg-amber-50 px-2 py-1 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
           게이지 조정: {r.gaugeAdjustmentSummary}

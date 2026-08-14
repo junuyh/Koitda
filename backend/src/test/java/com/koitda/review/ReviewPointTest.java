@@ -142,6 +142,64 @@ class ReviewPointTest {
 	}
 
 	@Test
+	void 로그를_불러와_리뷰를_쓰면_별점과_로그_사진이_함께_등록된다() throws Exception {
+		long userId = signup("rp-logreview@koitda.dev");
+		MockHttpSession user = login("rp-logreview@koitda.dev");
+		long patternId = seedApprovedPattern("사진리뷰 스웨터");
+		purchase(user, patternId);
+
+		// 도안 연결 니팅로그 생성
+		MvcResult proj = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"CATALOG\",\"sellingPatternId\":%d,\"visibility\":\"PUBLIC\"}".formatted(patternId)))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(proj.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 니팅로그 대표 사진 2장을 직접 심는다(업로드 대신 file_asset+project_image).
+		Long f1 = jdbc.queryForObject("""
+				INSERT INTO file_asset(uploader_id, usage_type, storage_key, upload_status)
+				VALUES (?, 'PROJECT_IMAGE', 'k/1.jpg', 'COMPLETED') RETURNING id""", Long.class, userId);
+		Long f2 = jdbc.queryForObject("""
+				INSERT INTO file_asset(uploader_id, usage_type, storage_key, upload_status)
+				VALUES (?, 'PROJECT_IMAGE', 'k/2.jpg', 'COMPLETED') RETURNING id""", Long.class, userId);
+		jdbc.update("INSERT INTO project_image(project_id, file_id, sort_order) VALUES (?,?,0),(?,?,1)",
+				projectId, f1, projectId, f2);
+
+		// 오늘의 로그 작성 → 리뷰 불러오기 후보(sourcePostId)
+		MvcResult log = mockMvc.perform(post("/api/v1/projects/" + projectId + "/posts").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"FO\",\"comment\":\"완성했어요\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		long postId = ((Number) JsonPath.read(log.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 로그를 불러와 별점 5로 리뷰 작성
+		mockMvc.perform(post("/api/v1/patterns/" + patternId + "/reviews").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"sourcePostId\":%d,\"rating\":5,\"visibility\":\"PUBLIC\"}".formatted(postId)))
+				.andExpect(status().isCreated());
+
+		// 목록: 별점 5 + 로그 사진 2장이 리뷰에 복사됨
+		mockMvc.perform(get("/api/v1/patterns/" + patternId + "/reviews").session(user))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].rating").value(5))
+				.andExpect(jsonPath("$.items[0].images.length()").value(2))
+				.andExpect(jsonPath("$.items[0].images[0]").value("/api/v1/files/" + f1));
+	}
+
+	@Test
+	void 별점이_범위를_벗어나면_400() throws Exception {
+		signup("rp-badrating@koitda.dev");
+		MockHttpSession user = login("rp-badrating@koitda.dev");
+		long patternId = seedApprovedPattern("별점범위 테스트");
+		purchase(user, patternId);
+		mockMvc.perform(post("/api/v1/patterns/" + patternId + "/reviews").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"contentText\":\"별점6\",\"rating\":6}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
 	void 미구매자는_리뷰를_쓸_수_없다_403() throws Exception {
 		signup("rp-buyer@koitda.dev");
 		MockHttpSession buyer = login("rp-buyer@koitda.dev");

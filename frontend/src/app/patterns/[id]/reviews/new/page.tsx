@@ -23,6 +23,7 @@ export default function NewReviewPage() {
   const [sourcePostId, setSourcePostId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [contentText, setContentText] = useState("");
+  const [rating, setRating] = useState<number>(5);
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export default function NewReviewPage() {
       sourcePostId: sourcePostId ?? undefined,
       title: title.trim() || undefined,
       contentText: contentText.trim() || undefined,
+      rating,
       visibility,
     });
   }
@@ -88,9 +90,26 @@ export default function NewReviewPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-neutral-400">불러온 본문은 복사되어 원본 로그와 독립적으로 유지됩니다.</p>
+            <p className="mt-1 text-xs text-neutral-400">
+              불러온 본문은 복사되어 원본 로그와 독립적으로 유지됩니다.
+              {sourcePostId != null && " 선택한 로그의 대표 사진도 리뷰에 함께 등록됩니다. 📷"}
+            </p>
           </section>
         )}
+
+        {/* 별점 (REVIEW) */}
+        <div>
+          <span className="mb-1 block text-xs text-neutral-500">별점</span>
+          <div className="flex items-center gap-1" role="radiogroup" aria-label="별점">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n}점`}
+                className={`text-3xl leading-none transition ${n <= rating ? "text-amber-400" : "text-neutral-300 dark:text-neutral-600"}`}>
+                ★
+              </button>
+            ))}
+            <span className="ml-2 text-sm font-bold text-neutral-500">{rating}.0</span>
+          </div>
+        </div>
 
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500">제목 {sourcePostId != null && "(비우면 로그 제목 사용)"}</span>

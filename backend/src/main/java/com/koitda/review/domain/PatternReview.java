@@ -56,6 +56,10 @@ public class PatternReview {
 	@Column(name = "gauge_adjustment_summary")
 	private String gaugeAdjustmentSummary;
 
+	/** 별점 1~5(선택). 값이 있으면 DB CHECK 로 범위 강제. */
+	@Column(name = "rating")
+	private Integer rating;
+
 	@Column(name = "visibility", nullable = false)
 	private String visibility = "PUBLIC";
 
@@ -82,7 +86,7 @@ public class PatternReview {
 
 	public static PatternReview create(Long userId, Long patternId, Long libraryId, Long sourcePostId,
 			Long sourceProjectId, String title, String contentDocument, String contentText, Long coverFileId,
-			String knittingStatus, String gaugeAdjustmentSummary, String visibility) {
+			String knittingStatus, String gaugeAdjustmentSummary, Integer rating, String visibility) {
 		PatternReview r = new PatternReview();
 		r.userId = userId;
 		r.patternId = patternId;
@@ -95,6 +99,7 @@ public class PatternReview {
 		r.coverFileId = coverFileId;
 		r.knittingStatus = knittingStatus;
 		r.gaugeAdjustmentSummary = gaugeAdjustmentSummary;
+		r.rating = rating;
 		r.visibility = (visibility == null) ? "PUBLIC" : visibility;
 		r.moderationStatus = "NORMAL";
 		OffsetDateTime now = OffsetDateTime.now();
@@ -104,11 +109,14 @@ public class PatternReview {
 	}
 
 	/** 작성자 본인 수정(REVIEW-008). 원본 로그와 독립이라 자유 편집한다. */
-	public void edit(String title, String contentText, String visibility) {
+	public void edit(String title, String contentText, String visibility, Integer rating) {
 		this.title = title;
 		this.contentText = contentText;
 		if (visibility != null) {
 			this.visibility = visibility;
+		}
+		if (rating != null) {
+			this.rating = rating;
 		}
 		this.updatedAt = OffsetDateTime.now();
 	}
@@ -169,6 +177,10 @@ public class PatternReview {
 
 	public String getGaugeAdjustmentSummary() {
 		return gaugeAdjustmentSummary;
+	}
+
+	public Integer getRating() {
+		return rating;
 	}
 
 	public String getVisibility() {

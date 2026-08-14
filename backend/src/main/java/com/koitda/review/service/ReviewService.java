@@ -52,11 +52,15 @@ public class ReviewService {
 	private final UserRepository userRepository;
 	private final PointService pointService;
 	private final SocialService socialService;
+	private final com.koitda.review.repository.ReviewImageRepository reviewImageRepository;
+	private final com.koitda.project.repository.ProjectImageRepository projectImageRepository;
 
 	public ReviewService(PatternReviewRepository reviewRepository, SellingPatternRepository patternRepository,
 			PatternLibraryRepository libraryRepository, ContentPostRepository postRepository,
 			KnittingProjectRepository projectRepository, UserRepository userRepository, PointService pointService,
-			SocialService socialService) {
+			SocialService socialService,
+			com.koitda.review.repository.ReviewImageRepository reviewImageRepository,
+			com.koitda.project.repository.ProjectImageRepository projectImageRepository) {
 		this.reviewRepository = reviewRepository;
 		this.patternRepository = patternRepository;
 		this.libraryRepository = libraryRepository;
@@ -65,6 +69,8 @@ public class ReviewService {
 		this.userRepository = userRepository;
 		this.pointService = pointService;
 		this.socialService = socialService;
+		this.reviewImageRepository = reviewImageRepository;
+		this.projectImageRepository = projectImageRepository;
 	}
 
 	/** 리뷰 작성(REVIEW-002·003·004) + 최초 등록 포인트 적립(POINT-001). */
@@ -103,9 +109,11 @@ public class ReviewService {
 			}
 		}
 
+		Integer rating = validateRating(req.rating());
+
 		// gauge_adjustment_summary(REVIEW-010)는 게이지 계산 기능 도입 시 원본에서 복사한다. 지금은 null.
 		PatternReview review = PatternReview.create(userId, patternId, library.getId(), sourcePostId,
-				sourceProjectId, title, contentDocument, contentText, null, knittingStatus, null, req.visibility());
+				sourceProjectId, title, contentDocument, contentText, null, knittingStatus, null, rating, req.visibility());
 		try {
 			reviewRepository.saveAndFlush(review);
 		} catch (DataIntegrityViolationException e) {
@@ -113,6 +121,17 @@ public class ReviewService {
 			throw new ApiException(ErrorCode.REVIEW_ALREADY_EXISTS, "이미 이 도안에 리뷰를 작성했습니다.");
 		}
 		reviewRepository.addPatternReviewCount(patternId, 1);
+
+		// 로그에서 불러온 경우: 그 니팅로그의 대표 사진을 리뷰에 복사(file_id 만 공유).
+		if (sourceProjectId != null) {
+			int order = 0;
+			for (var pi : projectImageRepository.findByProject(sourceProjectId)) {
+				if (pi.getFile() != null) {
+					reviewImageRepository.save(new com.koitda.review.domain.ReviewImage(
+							review.getId(), pi.getFile().getId(), order++));
+				}
+			}
+		}
 
 		EarnResult earn = pointService.awardReviewPoint(userId, review.getId());
 		return new ReviewCreatedResponse(review.getId(), review.getContentText(),
@@ -132,12 +151,14 @@ public class ReviewService {
 		Map<Long, String> nicknames = nicknamesOf(reviews.stream().map(PatternReview::getUserId).toList());
 		Map<Long, SocialService.Counts> counts = socialService.countsFor(
 				TargetType.REVIEW, reviews.stream().map(PatternReview::getId).toList(), userId);
+		Map<Long, List<String>> imagesByReview = imagesFor(reviews.stream().map(PatternReview::getId).toList());
 
 		List<ReviewItem> items = reviews.stream().map(r -> {
 			SocialService.Counts c = counts.getOrDefault(r.getId(), new SocialService.Counts(0, 0, false));
 			return new ReviewItem(
 					r.getId(), nicknames.getOrDefault(r.getUserId(), "탈퇴한 사용자"), r.getTitle(), r.getContentText(),
-					r.getKnittingStatus(), r.getGaugeAdjustmentSummary(), c.likeCount(), c.commentCount(), c.liked(),
+					r.getKnittingStatus(), r.getGaugeAdjustmentSummary(), r.getRating(),
+					imagesByReview.getOrDefault(r.getId(), List.of()), c.likeCount(), c.commentCount(), c.liked(),
 					userId != null && r.isOwnedBy(userId), r.getCreatedAt());
 		}).toList();
 
@@ -169,7 +190,8 @@ public class ReviewService {
 		}
 		String nickname = nicknamesOf(List.of(r.getUserId())).getOrDefault(r.getUserId(), "탈퇴한 사용자");
 		return new ReviewDetail(r.getId(), nickname, r.getTitle(), r.getContentText(), r.getContentDocument(),
-				r.getKnittingStatus(), r.getGaugeAdjustmentSummary(), r.getVisibility(), mine, r.getCreatedAt());
+				r.getKnittingStatus(), r.getGaugeAdjustmentSummary(), r.getRating(),
+				imagesFor(List.of(r.getId())).getOrDefault(r.getId(), List.of()), r.getVisibility(), mine, r.getCreatedAt());
 	}
 
 	/** 리뷰 수정(REVIEW-008) — 작성자만. */
@@ -178,7 +200,7 @@ public class ReviewService {
 		PatternReview r = ownedActiveReview(reviewId, userId);
 		String title = req.title() != null ? trimToNull(req.title()) : r.getTitle();
 		String contentText = req.contentText() != null ? trimToNull(req.contentText()) : r.getContentText();
-		r.edit(title, contentText, req.visibility());
+		r.edit(title, contentText, req.visibility(), validateRating(req.rating()));
 	}
 
 	/** 리뷰 삭제(REVIEW-008) + 포인트 회수(POINT-003). 삭제 후 재작성 가능. */
@@ -237,5 +259,29 @@ public class ReviewService {
 
 	private static String trimToNull(String s) {
 		return (s == null || s.isBlank()) ? null : s.trim();
+	}
+
+	/** 별점 검증 — null 은 미입력(허용), 값이 있으면 1~5. */
+	private Integer validateRating(Integer rating) {
+		if (rating == null) {
+			return null;
+		}
+		if (rating < 1 || rating > 5) {
+			throw new ApiException(ErrorCode.VALIDATION_ERROR, "별점은 1~5 사이여야 합니다.");
+		}
+		return rating;
+	}
+
+	/** 리뷰 id 목록 → 리뷰별 이미지 URL 목록(N+1 방지 배치 조회). */
+	private Map<Long, List<String>> imagesFor(List<Long> reviewIds) {
+		Map<Long, List<String>> map = new HashMap<>();
+		if (reviewIds.isEmpty()) {
+			return map;
+		}
+		for (var img : reviewImageRepository.findByReviewIdInOrderBySortOrderAscIdAsc(reviewIds)) {
+			map.computeIfAbsent(img.getReviewId(), k -> new java.util.ArrayList<>())
+					.add("/api/v1/files/" + img.getFileId());
+		}
+		return map;
 	}
 }
