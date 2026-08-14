@@ -81,6 +81,7 @@ public final class GaugeDtos {
 			String selectedSizeLabel,
 			@com.fasterxml.jackson.annotation.JsonRawValue String myGauge,
 			@com.fasterxml.jackson.annotation.JsonRawValue String patternGauge,
-			@com.fasterxml.jackson.annotation.JsonRawValue String result) {
+			@com.fasterxml.jackson.annotation.JsonRawValue String result,
+			String aiAdvice) {
 	}
 }

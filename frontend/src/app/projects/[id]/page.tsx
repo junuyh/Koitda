@@ -391,6 +391,12 @@ export default function ProjectDetailPage() {
                     <GaugeResultView result={appliedGauge.result} labels={MEASURE_LABEL} />
                   </div>
                 )}
+                {appliedGauge.aiAdvice && (
+                  <div className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300">✨ AI 게이지 조언</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-neutral-700 dark:text-neutral-200">{appliedGauge.aiAdvice}</p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex items-center justify-between gap-3">

@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /** ⑬ 게이지 계산(GAUGE-006·007·011·013·014). 서버 수식 정확도와 적용/공개를 검증한다. */
-@Import(TestcontainersConfiguration.class)
+@Import({ TestcontainersConfiguration.class, GaugeCalcTest.FakeGeminiConfig.class })
 @SpringBootTest
 @AutoConfigureMockMvc
 class GaugeCalcTest {
@@ -30,6 +30,27 @@ class GaugeCalcTest {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	/** 실제 Gemini 대신 고정 조언을 돌려주는 Fake — 네트워크 없이 저장·노출만 검증. */
+	@org.springframework.boot.test.context.TestConfiguration
+	static class FakeGeminiConfig {
+		@org.springframework.context.annotation.Bean
+		@org.springframework.context.annotation.Primary
+		com.koitda.gauge.ai.GeminiClient fakeGemini() {
+			return new com.koitda.gauge.ai.GeminiClient("test-key", "fake-model",
+					new tools.jackson.databind.ObjectMapper()) {
+				@Override
+				public boolean isConfigured() {
+					return true;
+				}
+
+				@Override
+				public String generate(String prompt) {
+					return "게이지 차이가 있으니 바늘을 조절하고 스와치를 다시 재보세요.";
+				}
+			};
+		}
+	}
 
 	private void signup(String email) throws Exception {
 		mockMvc.perform(post("/api/v1/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -48,9 +69,10 @@ class GaugeCalcTest {
 	}
 
 	private long seedPattern() {
-		Long su = jdbc.queryForObject("INSERT INTO users(nickname) VALUES ('게이지공방') RETURNING id", Long.class);
+		String brand = "게이지공방_" + java.util.UUID.randomUUID().toString().substring(0, 8); // 닉네임 유니크
+		Long su = jdbc.queryForObject("INSERT INTO users(nickname) VALUES (?) RETURNING id", Long.class, brand);
 		Long sid = jdbc.queryForObject(
-				"INSERT INTO seller_profile(user_id, brand_name) VALUES (?, '게이지공방') RETURNING id", Long.class, su);
+				"INSERT INTO seller_profile(user_id, brand_name) VALUES (?, ?) RETURNING id", Long.class, su, brand);
 		return jdbc.queryForObject("""
 				INSERT INTO selling_pattern (seller_id, title, craft_type, regular_price, sale_price, product_status, published_at, gauge_info, size_info)
 				VALUES (?, '게이지 스웨터', 'KNIT', 10000, 10000, 'APPROVED', now(),
@@ -154,5 +176,38 @@ class GaugeCalcTest {
 		mockMvc.perform(get("/api/v1/projects/" + projectId + "/gauge-calculation"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.adjustmentSummary").value("품 +5cm"));
+	}
+
+	@Test
+	void AI조언을_받으면_계산에_저장되고_적용시_요약에_함께_노출된다() throws Exception {
+		signup("gauge-ai@koitda.dev");
+		MockHttpSession user = login("gauge-ai@koitda.dev");
+		long patternId = seedPattern();
+		MvcResult proj = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"CATALOG\",\"sellingPatternId\":%d,\"visibility\":\"PRIVATE\"}".formatted(patternId)))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(proj.getResponse().getContentAsString(), "$.id")).longValue();
+
+		MvcResult calc = mockMvc.perform(post("/api/v1/gauge/calculations").with(csrf()).session(user)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"projectId":%d,"patternGauge":{"stitches":22,"rows":30,"needleSizeMm":4.5},
+						 "myGauge":{"stitches":24,"rows":32},"selectedSizeLabel":"2 (M)"}
+						""".formatted(projectId)))
+				.andExpect(status().isOk()).andReturn();
+		long calcId = ((Number) JsonPath.read(calc.getResponse().getContentAsString(), "$.calculationId")).longValue();
+
+		// AI 조언 생성(Fake) → 응답에 조언 + 계산에 저장
+		mockMvc.perform(post("/api/v1/gauge/calculations/" + calcId + "/ai-advice").with(csrf()).session(user))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.advice").value(org.hamcrest.Matchers.containsString("스와치")));
+
+		// 적용 → 적용 요약(gauge-calculation)에 aiAdvice 가 함께 노출
+		mockMvc.perform(post("/api/v1/gauge/calculations/" + calcId + "/apply").with(csrf()).session(user))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/projects/" + projectId + "/gauge-calculation").session(user))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aiAdvice").value(org.hamcrest.Matchers.containsString("스와치")));
 	}
 }

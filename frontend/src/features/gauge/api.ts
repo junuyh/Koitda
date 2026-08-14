@@ -50,6 +50,7 @@ export type AppliedGaugeSummary = {
   myGauge: GaugeInput | null;
   patternGauge: GaugeInput | null;
   result: CalculationResult | null;
+  aiAdvice: string | null;
 } | null;
 
 export type CalculateBody = {

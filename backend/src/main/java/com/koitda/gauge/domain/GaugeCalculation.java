@@ -56,6 +56,10 @@ public class GaugeCalculation {
 	@Column(name = "is_applied", nullable = false)
 	private boolean applied;
 
+	/** 사용자가 '조언 받기'로 생성한 AI 조언(참고 문구). 적용 시 함께 노출. */
+	@Column(name = "ai_advice")
+	private String aiAdvice;
+
 	@Column(name = "created_at", nullable = false, updatable = false, insertable = false)
 	private OffsetDateTime createdAt;
 
@@ -81,6 +85,15 @@ public class GaugeCalculation {
 
 	public void apply() {
 		this.applied = true;
+	}
+
+	/** AI 조언 저장(사용자가 생성한 문구를 이 계산에 붙인다). */
+	public void attachAiAdvice(String advice) {
+		this.aiAdvice = advice;
+	}
+
+	public String getAiAdvice() {
+		return aiAdvice;
 	}
 
 	public void unapply() {

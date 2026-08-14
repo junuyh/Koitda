@@ -54,14 +54,17 @@ public class GaugeService {
 
 	/**
 	 * AI 게이지 조언(GAUGE-018 보조). 수치는 코드 계산 결과를 그대로 근거로 넣고,
-	 * AI 에게는 '자연어 조언'만 요청한다(숫자 새로 만들지 말 것). 저장하지 않고 즉석 반환.
+	 * AI 에게는 '자연어 조언'만 요청한다(숫자 새로 만들지 말 것).
+	 * 사용자가 직접 생성을 요청한 것이므로 그 계산에 저장한다 → 적용 시 함께 노출.
 	 */
-	@Transactional(readOnly = true)
+	@Transactional
 	public String aiAdvice(Long userId, Long calculationId) {
 		GaugeCalculation calc = calculationRepository.findById(calculationId)
 				.orElseThrow(() -> new ApiException(ErrorCode.GAUGE_CALCULATION_NOT_FOUND, "계산을 찾을 수 없습니다."));
 		ownProject(userId, calc.getProjectId());
-		return geminiClient.generate(buildAdvicePrompt(calc));
+		String advice = geminiClient.generate(buildAdvicePrompt(calc));
+		calc.attachAiAdvice(advice);
+		return advice;
 	}
 
 	/** 계산 결과(코드 산출값)를 근거로 조언 프롬프트를 구성한다. 숫자는 여기서 이미 확정된 값만 전달. */
@@ -168,7 +171,7 @@ public class GaugeService {
 		return calculationRepository.findByProjectIdAndAppliedTrue(projectId)
 				.map(c -> new AppliedCalculationSummary(c.getId(), c.getAdjustedCastOnStitches(),
 						c.getAdjustmentSummary(), c.isHasAdjustment(), c.getSelectedSizeLabel(),
-						c.getMyGauge(), c.getPatternGauge(), c.getResult()))
+						c.getMyGauge(), c.getPatternGauge(), c.getResult(), c.getAiAdvice()))
 				.orElse(null);
 	}
 
