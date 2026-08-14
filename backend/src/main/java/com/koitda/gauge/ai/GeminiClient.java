@@ -29,47 +29,107 @@ public class GeminiClient {
 
 	public GeminiClient(
 			@Value("${gemini.api-key:}") String apiKey,
-			@Value("${gemini.model:gemini-2.0-flash}") String model,
+			@Value("${gemini.model:gemini-flash-latest}") String model,
 			ObjectMapper objectMapper) {
 		this.apiKey = apiKey;
 		this.model = model;
 		this.objectMapper = objectMapper;
 	}
 
+	private static final String BASE = "https://generativelanguage.googleapis.com/v1beta";
+	private volatile String resolvedModel; // 실제로 동작한 모델을 캐시
+
 	public boolean isConfigured() {
 		return apiKey != null && !apiKey.isBlank();
 	}
 
-	/** 프롬프트 → 생성 텍스트. 실패 시 사용자에게는 일반 메시지, 로그에 원인 기록. */
+	/** 프롬프트 → 생성 텍스트. 이미 확정된 모델이 있으면 그걸로, 없으면 후보를 차례로 시도해 되는 모델을 찾는다. */
 	public String generate(String prompt) {
 		if (!isConfigured()) {
 			throw new ApiException(ErrorCode.VALIDATION_ERROR, "AI 조언이 설정되지 않았습니다. 관리자에게 문의하세요.");
 		}
-		String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
-		String body;
-		try {
-			// 요청 스키마: {"contents":[{"parts":[{"text": ...}]}]}
-			var payload = objectMapper.createObjectNode();
-			var contents = payload.putArray("contents");
-			var parts = contents.addObject().putArray("parts");
-			parts.addObject().put("text", prompt);
-
-			String raw = restClient.post().uri(url)
-					.header("x-goog-api-key", apiKey)
-					.contentType(MediaType.APPLICATION_JSON)
-					.body(objectMapper.writeValueAsString(payload))
-					.retrieve()
-					.body(String.class);
-			return extractText(raw);
-		} catch (RestClientResponseException e) {
-			log.warn("Gemini 호출 실패: status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
-			throw new ApiException(ErrorCode.INTERNAL_ERROR, "AI 조언 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
-		} catch (ApiException e) {
-			throw e;
-		} catch (Exception e) {
-			log.warn("Gemini 호출 중 오류", e);
-			throw new ApiException(ErrorCode.INTERNAL_ERROR, "AI 조언 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+		// 이미 동작 확인된 모델이 있으면 그대로.
+		if (resolvedModel != null) {
+			try {
+				return callGenerate(resolvedModel, prompt);
+			} catch (Exception e) {
+				resolvedModel = null; // 그 모델이 갑자기 막히면 다시 탐색
+			}
 		}
+		// 후보(설정 모델 → 키가 지원하는 텍스트 모델들)를 순서대로 시도, 처음 성공한 모델을 확정.
+		RuntimeException last = null;
+		for (String candidate : candidateModels()) {
+			try {
+				String text = callGenerate(candidate, prompt);
+				resolvedModel = candidate;
+				log.info("Gemini 모델 확정: {}", candidate);
+				return text;
+			} catch (RestClientResponseException e) {
+				log.warn("Gemini 모델 '{}' 실패: status={}", candidate, e.getStatusCode());
+				last = e;
+			} catch (ApiException e) {
+				last = e;
+			} catch (Exception e) {
+				log.warn("Gemini 모델 '{}' 호출 오류", candidate, e);
+				last = new RuntimeException(e);
+			}
+		}
+		log.warn("사용 가능한 Gemini 모델을 찾지 못했습니다.", last);
+		throw new ApiException(ErrorCode.INTERNAL_ERROR, "AI 조언 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+	}
+
+	/** 시도할 모델 후보를 우선순위대로. 설정값을 먼저, 이어서 키가 지원하는 텍스트 flash 계열. */
+	private java.util.List<String> candidateModels() {
+		var out = new java.util.LinkedHashSet<String>();
+		if (model != null && !model.isBlank()) {
+			out.add(model.trim());
+		}
+		// 안정적인 별칭 우선.
+		out.add("gemini-flash-latest");
+		out.add("gemini-flash-lite-latest");
+		// 키가 실제 지원하는 텍스트 모델(이미지·TTS·임베딩 등 제외)을 flash 우선으로 추가.
+		try {
+			String raw = restClient.get().uri(BASE + "/models?pageSize=200")
+					.header("x-goog-api-key", apiKey).retrieve().body(String.class);
+			JsonNode models = objectMapper.readTree(raw).path("models");
+			var flash = new java.util.ArrayList<String>();
+			var others = new java.util.ArrayList<String>();
+			for (JsonNode m : models) {
+				boolean gen = false;
+				for (JsonNode meth : m.path("supportedGenerationMethods")) {
+					if ("generateContent".equals(meth.asString())) { gen = true; break; }
+				}
+				if (!gen) continue;
+				String name = m.path("name").asString().replaceFirst("^models/", "");
+				String l = name.toLowerCase();
+				if (l.contains("image") || l.contains("tts") || l.contains("embedding") || l.contains("vision")
+						|| l.contains("robotics") || l.contains("lyria") || l.contains("computer")
+						|| l.contains("deep-research") || l.contains("antigravity") || l.contains("nano")
+						|| l.contains("customtools")) {
+					continue; // 텍스트 조언에 부적합
+				}
+				if (l.contains("flash")) flash.add(name); else others.add(name);
+			}
+			out.addAll(flash);
+			out.addAll(others);
+		} catch (Exception e) {
+			log.warn("Gemini 모델 목록 조회 실패(후보는 기본값으로 진행)", e);
+		}
+		return new java.util.ArrayList<>(out);
+	}
+
+	/** 실제 generateContent 호출. */
+	private String callGenerate(String modelName, String prompt) {
+		var payload = objectMapper.createObjectNode();
+		var parts = payload.putArray("contents").addObject().putArray("parts");
+		parts.addObject().put("text", prompt);
+		String raw = restClient.post().uri(BASE + "/models/" + modelName + ":generateContent")
+				.header("x-goog-api-key", apiKey)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(objectMapper.writeValueAsString(payload))
+				.retrieve()
+				.body(String.class);
+		return extractText(raw);
 	}
 
 	/** 응답에서 candidates[0].content.parts[*].text 를 이어붙인다. */
