@@ -159,20 +159,25 @@ export default function ProjectDetailPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       {/* 상단 행: 뒤로 + (우측 끝) 공개 전환·삭제 */}
       <div className="flex items-center justify-between gap-3">
-        <Link href="/projects" className="text-sm font-bold text-neutral-500 hover:underline">← 내 니팅로그</Link>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
-            disabled={changeVisibility.isPending}
-            className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-bold disabled:opacity-50 dark:border-neutral-100">
-            {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
-          </button>
-          <button type="button"
-            onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
-            disabled={trash.isPending}
-            className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-bold text-red-500 disabled:opacity-50">
-            삭제
-          </button>
-        </div>
+        <Link href={p.mine ? "/projects" : "/explore"} className="text-sm font-bold text-neutral-500 hover:underline">
+          {p.mine ? "← 내 니팅로그" : "← 둘러보기"}
+        </Link>
+        {/* 편집·공개·삭제는 작성자만. */}
+        {p.mine && (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => changeVisibility.mutate(p.visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+              disabled={changeVisibility.isPending}
+              className="rounded-full border-2 border-neutral-900 px-4 py-1.5 text-xs font-bold disabled:opacity-50 dark:border-neutral-100">
+              {p.visibility === "PUBLIC" ? "비공개로 전환" : "공개로 전환"}
+            </button>
+            <button type="button"
+              onClick={() => { if (window.confirm("이 니팅로그를 휴지통으로 옮길까요? 연결된 오늘의 로그도 함께 이동합니다.")) trash.mutate(); }}
+              disabled={trash.isPending}
+              className="rounded-full border-2 border-red-500 px-4 py-1.5 text-xs font-bold text-red-500 disabled:opacity-50">
+              삭제
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 space-y-4">
@@ -188,10 +193,12 @@ export default function ProjectDetailPage() {
             <span className={`absolute left-4 top-4 rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100 ${accent.solid}`}>
               {STATUS_LABEL[p.status] ?? p.status}
             </span>
-            <button type="button" onClick={() => setPhotoOpen(true)}
-              className="absolute right-4 top-4 rounded-full border-2 border-neutral-900 bg-white/90 px-3 py-1 text-xs font-bold text-neutral-900 transition hover:bg-white">
-              📷 사진
-            </button>
+            {p.mine && (
+              <button type="button" onClick={() => setPhotoOpen(true)}
+                className="absolute right-4 top-4 rounded-full border-2 border-neutral-900 bg-white/90 px-3 py-1 text-xs font-bold text-neutral-900 transition hover:bg-white">
+                📷 사진
+              </button>
+            )}
           </div>
 
           <div className="p-5">
@@ -269,10 +276,12 @@ export default function ProjectDetailPage() {
 
         {/* 내 니팅 정보 — 내가 입력한 실·바늘·게이지 한 블록 */}
         <Section title="내 니팅 정보">
-          <div className="mb-2 flex justify-end">
-            <button type="button" onClick={() => setMaterialsOpen(true)}
-              className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100">실·바늘 편집</button>
-          </div>
+          {p.mine && (
+            <div className="mb-2 flex justify-end">
+              <button type="button" onClick={() => setMaterialsOpen(true)}
+                className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold dark:border-neutral-100">실·바늘 편집</button>
+            </div>
+          )}
           <dl className="space-y-3 text-sm">
             <div>
               <dt className="mb-1 text-xs font-bold text-neutral-400">🧶 실</dt>
@@ -312,8 +321,8 @@ export default function ProjectDetailPage() {
           </dl>
         </Section>
 
-        {/* 게이지 — 적용한 내 게이지(굵게) + 계산 결과 전체 */}
-        {p.patternType !== "EXTERNAL" && (
+        {/* 게이지 — 적용 결과는 공개(GAUGE-014), 계산 진입은 작성자만. */}
+        {p.patternType !== "EXTERNAL" && (appliedGauge || p.mine) && (
           <Section title="게이지">
             {appliedGauge ? (
               <>
@@ -327,7 +336,7 @@ export default function ProjectDetailPage() {
                       <span className="text-sm text-neutral-500"> · 바늘 {appliedGauge.myGauge.needleSizeMm}mm</span>
                     )}
                   </p>
-                  <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs font-bold underline">다시 계산</Link>
+                  {p.mine && <Link href={`/projects/${id}/gauge`} className="shrink-0 text-xs font-bold underline">다시 계산</Link>}
                 </div>
                 {appliedGauge.result && (
                   <div className="mt-4">
@@ -348,10 +357,12 @@ export default function ProjectDetailPage() {
         <section className={`${box} p-5`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">오늘의 로그</h2>
-            <button type="button" onClick={() => setWriteOpen(true)}
-              className="rounded-full border-2 border-neutral-900 bg-lime-300 px-4 py-1.5 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100">
-              + 오늘의 로그
-            </button>
+            {p.mine && (
+              <button type="button" onClick={() => setWriteOpen(true)}
+                className="rounded-full border-2 border-neutral-900 bg-lime-300 px-4 py-1.5 text-sm font-bold text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100">
+                + 오늘의 로그
+              </button>
+            )}
           </div>
 
           {(() => {
@@ -422,7 +433,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {openLog && (
-        <LogModal log={openLog}
+        <LogModal log={openLog} canEdit={p.mine}
           onClose={() => setOpenLog(null)}
           onEdit={() => { const l = openLog; setOpenLog(null); setEditTarget(l); }}
           onDelete={() => {
@@ -595,9 +606,9 @@ function Modal({ onClose, children, maxWidth = "max-w-2xl" }: { onClose: () => v
   );
 }
 
-/** 오늘의 로그 본문 팝업. 리스트에서 넘겨받은 데이터로 본문을 렌더한다. */
-function LogModal({ log, onClose, onEdit, onDelete }: {
-  log: LogItem; onClose: () => void; onEdit: () => void; onDelete: () => void;
+/** 오늘의 로그 본문 팝업. 리스트에서 넘겨받은 데이터로 본문을 렌더한다. 수정·삭제는 작성자만. */
+function LogModal({ log, onClose, onEdit, onDelete, canEdit }: {
+  log: LogItem; onClose: () => void; onEdit: () => void; onDelete: () => void; canEdit: boolean;
 }) {
   return (
     <Modal onClose={onClose}>
@@ -613,10 +624,14 @@ function LogModal({ log, onClose, onEdit, onDelete }: {
           <h3 className="mt-2 text-xl font-black tracking-tight">{log.displayTitle}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button type="button" onClick={onEdit}
-            className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">수정</button>
-          <button type="button" onClick={onDelete}
-            className="rounded-full border-2 border-red-500 px-3 py-1 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">삭제</button>
+          {canEdit && (
+            <>
+              <button type="button" onClick={onEdit}
+                className="rounded-full border-2 border-neutral-900 px-3 py-1 text-xs font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">수정</button>
+              <button type="button" onClick={onDelete}
+                className="rounded-full border-2 border-red-500 px-3 py-1 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">삭제</button>
+            </>
+          )}
           <button type="button" onClick={onClose} aria-label="닫기"
             className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-neutral-900 text-sm font-bold hover:bg-neutral-100 dark:border-neutral-100 dark:hover:bg-neutral-800">
             ✕

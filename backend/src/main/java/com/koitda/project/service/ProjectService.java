@@ -333,10 +333,11 @@ public class ProjectService {
 						pi.getFile() != null ? "/api/v1/files/" + pi.getFile().getId() : null))
 				.toList();
 
+		boolean mine = userId != null && p.getUserId().equals(userId);
 		return new ProjectDetailResponse(p.getId(), p.getTitle(), p.getDisplayTitle(),
 				p.getStatus().name(), p.getVisibility().name(), p.getPublicLogCount(), p.getNote(),
 				p.getCreatedAt(), patternType, p.getSellingPatternId(), p.getExternalPatternId(),
-				p.getPatternSnapshot(), external, yarns, needles, gauges, images);
+				p.getPatternSnapshot(), external, yarns, needles, gauges, images, mine);
 	}
 
 	// ---- helpers ----

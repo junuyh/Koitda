@@ -23,7 +23,8 @@ public record ProjectDetailResponse(
 		List<Yarn> yarns,
 		List<Needle> needles,
 		List<Gauge> gauges,
-		List<Image> images) {
+		List<Image> images,
+		boolean mine) {
 
 	public record Image(Long fileId, String url) {
 	}

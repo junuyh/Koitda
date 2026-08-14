@@ -46,6 +46,7 @@ export type ProjectDetail = {
   needles: Array<{ needleType: string | null; sizeMm: number | null; lengthCm: number | null; note: string | null }>;
   gauges: MaterialGauge[];
   images: Array<{ fileId: number | null; url: string | null }>;
+  mine: boolean; // 현재 로그인 사용자가 작성자인지 — 편집 컨트롤 노출 여부
 };
 
 export type TrashItem = {

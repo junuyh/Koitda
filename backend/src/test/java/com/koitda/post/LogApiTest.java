@@ -82,4 +82,47 @@ class LogApiTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.length()").value(3));
 	}
+
+	@Test
+	void 공개_니팅로그는_작성자만_편집할수있다() throws Exception {
+		// 소유자: 공개 외부 니팅로그 생성
+		MockHttpSession owner = loginSession("owner-log@koitda.dev");
+		MvcResult r = mockMvc.perform(post("/api/v1/projects").with(csrf()).session(owner)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"connectionType\":\"EXTERNAL\",\"externalPattern\":{\"title\":\"공개도안\"},\"visibility\":\"PUBLIC\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		long projectId = ((Number) JsonPath.read(r.getResponse().getContentAsString(), "$.id")).longValue();
+
+		// 소유자 상세: mine=true
+		mockMvc.perform(get("/api/v1/projects/" + projectId).session(owner))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mine").value(true));
+
+		// 타인: 공개라 열람은 되지만 mine=false
+		MockHttpSession other = loginSession("intruder-log@koitda.dev");
+		mockMvc.perform(get("/api/v1/projects/" + projectId).session(other))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mine").value(false));
+
+		// 타인은 오늘의 로그 작성 불가(소유자 검증 → 404)
+		mockMvc.perform(post("/api/v1/projects/" + projectId + "/posts").with(csrf()).session(other)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"comment\":\"남의 로그에 작성 시도\"}"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("PROJECT_NOT_FOUND"));
+
+		// 타인은 재료(실·바늘·게이지) 편집 불가(404)
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.patch("/api/v1/projects/" + projectId + "/materials").with(csrf()).session(other)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"yarns\":[{\"brand\":\"침입\",\"yarnName\":\"실\"}]}"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("PROJECT_NOT_FOUND"));
+
+		// 비로그인도 작성 불가(401)
+		mockMvc.perform(post("/api/v1/projects/" + projectId + "/posts").with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"knittingStatus\":\"WIP\",\"comment\":\"익명\"}"))
+				.andExpect(status().isUnauthorized());
+	}
 }
