@@ -23,7 +23,6 @@ export default function EditPatternPage() {
   const draftId = Number(params.draftId);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<DraftSaved | null>(null);
 
   const { data: preview, isLoading, isError } = useQuery({
@@ -32,13 +31,18 @@ export default function EditPatternPage() {
   });
 
   const save = useMutation({
-    mutationFn: (body: SavePatternDraftBody) => sellerPatternApi.updateDraft(draftId, body),
-    onSuccess: async (res) => {
-      setSaved(res);
+    mutationFn: (v: { body: SavePatternDraftBody; intent: "save" | "next" }) =>
+      sellerPatternApi.updateDraft(draftId, v.body).then((res) => ({ res, intent: v.intent })),
+    onSuccess: async ({ res, intent }) => {
       await queryClient.invalidateQueries({ queryKey: ["seller-pattern-preview", draftId] });
       await queryClient.invalidateQueries({ queryKey: ["seller-patterns"] });
+      if (intent === "next") {
+        router.push(`/seller/patterns/${draftId}/preview`);
+        return;
+      }
+      setSaved(res);
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "저장 중 오류가 발생했습니다."),
+    onError: (e) => window.alert(e instanceof ApiError ? `저장 실패\n\n${e.message}` : "서버 오류로 저장하지 못했습니다.\n잠시 후 다시 시도해 주세요."),
   });
 
   if (isLoading) return <Centered>불러오는 중…</Centered>;
@@ -68,23 +72,17 @@ export default function EditPatternPage() {
               제출 전 보완이 필요해요: {saved.missingFields.map((f) => MISSING_LABEL[f] ?? f).join(", ")}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">필수 항목이 모두 채워졌어요. 미리보기에서 확인하고 심사에 제출하세요.</p>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">필수 항목이 모두 채워졌어요. 아래 ‘저장 후 다음 →’으로 미리보기에서 확인하고 제출하세요.</p>
           )}
-          <Link href={`/seller/patterns/${draftId}/preview`}
-            className="mt-3 block w-full rounded-full border-2 border-neutral-900 bg-neutral-900 px-4 py-3 text-center text-sm font-black text-white transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900">
-            미리보기 · 심사 제출하기 →
-          </Link>
         </div>
       )}
-
-      {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
 
       {editable ? (
         <PatternForm
           initial={preview}
           submitting={save.isPending}
           submitLabel="임시저장"
-          onSubmit={(b) => { setError(null); setSaved(null); save.mutate(b); }}
+          onSubmit={(body, intent) => { setSaved(null); save.mutate({ body, intent }); }}
         />
       ) : (
         <p className="mt-6 text-sm text-neutral-500">
@@ -92,11 +90,6 @@ export default function EditPatternPage() {
           <Link href={`/seller/patterns/${draftId}/preview`} className="underline">미리보기</Link>
         </p>
       )}
-
-      <div className="mt-6">
-        <button type="button" onClick={() => router.push(`/seller/patterns/${draftId}/preview`)}
-          className="text-sm text-neutral-500 hover:underline">미리보기로 이동 →</button>
-      </div>
     </main>
   );
 }

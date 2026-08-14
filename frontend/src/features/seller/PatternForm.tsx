@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { patternApi } from "@/features/pattern/api";
 import type { SavePatternDraftBody, SellerPatternPreview } from "@/features/seller/api";
 import { ImageUploader } from "@/features/file/ImageUploader";
@@ -169,8 +169,10 @@ export function PatternForm({
   initial?: SellerPatternPreview;
   submitting: boolean;
   submitLabel: string;
-  onSubmit: (body: SavePatternDraftBody) => void;
+  // intent: "save"=임시저장(머무름), "next"=저장 후 미리보기로 이동
+  onSubmit: (body: SavePatternDraftBody, intent: "save" | "next") => void;
 }) {
+  const intentRef = useRef<"save" | "next">("save");
   const [form, setForm] = useState<FormState>(() => (initial ? fromPreview(initial) : blankForm));
   const [imageIds, setImageIds] = useState<number[]>(() => fileIdsFromPreview(initial));
   const [pdfIds, setPdfIds] = useState<number[]>(() => {
@@ -314,7 +316,7 @@ export function PatternForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const body = build();
-    if (body) onSubmit(body);
+    if (body) onSubmit(body, intentRef.current);
   }
 
   return (
@@ -516,10 +518,17 @@ export function PatternForm({
 
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
-      <button type="submit" disabled={submitting}
-        className="w-full rounded-md bg-neutral-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900">
-        {submitting ? "저장 중…" : submitLabel}
-      </button>
+      {/* 임시저장(머무름) + 저장 후 다음(미리보기 이동) — 동일 크기 1/2씩 */}
+      <div className="flex gap-3">
+        <button type="submit" disabled={submitting} onClick={() => { intentRef.current = "save"; }}
+          className="w-1/2 rounded-full border-2 border-neutral-900 px-3 py-3 text-sm font-black transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-100 dark:hover:bg-neutral-800">
+          {submitting && intentRef.current === "save" ? "저장 중…" : submitLabel}
+        </button>
+        <button type="submit" disabled={submitting} onClick={() => { intentRef.current = "next"; }}
+          className="w-1/2 rounded-full border-2 border-neutral-900 bg-amber-400 px-3 py-3 text-sm font-black text-neutral-900 transition hover:shadow-[3px_3px_0_0_rgba(0,0,0,0.9)] disabled:opacity-50 dark:border-neutral-100">
+          {submitting && intentRef.current === "next" ? "저장 중…" : "저장 후 다음 →"}
+        </button>
+      </div>
     </form>
   );
 }
