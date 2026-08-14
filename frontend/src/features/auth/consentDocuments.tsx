@@ -1,0 +1,42 @@
+"use client";
+
+import { useState } from "react";
+
+/**
+ * 약관·개인정보 동의서 전문. 데모용 표준 문구 — 실제 서비스 오픈 전 법무 검토가 필요하다.
+ * 화면(회원가입·카카오 동의)에서 '전문 보기'로 펼쳐 확인시킨다.
+ */
+export const SERVICE_TERMS = `제1조(목적) 이 약관은 코잇다(이하 "회사")가 제공하는 뜨개 통합 플랫폼 서비스의 이용과 관련하여 회사와 이용자의 권리·의무 및 책임사항을 규정합니다.
+제2조(회원가입) 이용자는 회사가 정한 절차에 따라 회원가입을 신청하며, 회사는 이를 승낙함으로써 이용계약이 성립합니다.
+제3조(서비스의 이용) 회원은 도안 탐색·구매, 니팅로그 기록, 오늘의 로그·실타래 게시, 리뷰 작성 등 회사가 제공하는 기능을 이용할 수 있습니다.
+제4조(회원의 의무) 회원은 타인의 저작물(도안 PDF 등)을 무단으로 복제·배포해서는 안 되며, 이를 위반할 경우 서비스 이용이 제한될 수 있습니다.
+제5조(게시물) 회원이 작성한 게시물의 저작권은 회원에게 있으며, 회사는 서비스 운영·홍보 목적 범위에서 이를 이용할 수 있습니다.
+제6조(계약 해지) 회원은 언제든지 탈퇴를 요청할 수 있고, 회사는 관련 법령에 따라 개인정보를 파기합니다.`;
+
+export const PRIVACY_POLICY = `1. 수집 항목: 이메일, 닉네임, 비밀번호(암호화 저장) 또는 소셜 로그인 식별자(카카오 회원번호·이메일·닉네임).
+2. 수집 목적: 회원 식별·인증, 서비스 제공(도안 구매·니팅로그·리뷰·포인트), 문의 응대, 부정 이용 방지.
+3. 보유 기간: 회원 탈퇴 시 지체 없이 파기합니다. 단, 전자상거래법 등 관련 법령이 정한 거래·정산 기록은 해당 기간 동안 보관합니다.
+4. 제3자 제공: 원칙적으로 제공하지 않으며, 법령에 근거가 있거나 이용자가 동의한 경우에 한합니다.
+5. 소셜 로그인: 카카오 계정으로 로그인 시 카카오로부터 회원번호·이메일·프로필 닉네임을 전달받아 회원 식별에 사용합니다.
+6. 이용자 권리: 이용자는 자신의 개인정보 열람·정정·삭제·처리정지를 요청할 수 있습니다.
+7. 동의 거부 권리: 필수 항목 동의를 거부할 수 있으나, 이 경우 회원가입 및 서비스 이용이 제한됩니다.`;
+
+export const MARKETING_INFO = `이벤트·혜택·신규 도안 소식 등 마케팅 정보를 이메일 등으로 받아보는 것에 대한 선택 동의입니다. 동의하지 않아도 서비스 이용에는 제한이 없으며, 수신 동의는 마이페이지에서 언제든지 철회할 수 있습니다.`;
+
+/** 접었다 펼치는 약관 전문 상자. */
+export function TermsDocument({ title, body }: { title: string; body: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="ml-6">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="text-xs text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200">
+        {open ? "전문 접기" : "전문 보기"}
+      </button>
+      {open && (
+        <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+          {body}
+        </pre>
+      )}
+    </div>
+  );
+}

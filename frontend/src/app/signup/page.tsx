@@ -9,6 +9,13 @@ import { ApiError } from "@/lib/api";
 import { authApi } from "@/features/auth/api";
 import { signupSchema, type SignupInput } from "@/features/auth/schemas";
 import { Field, inputClass, buttonClass } from "@/components/form";
+import { KakaoLoginButton } from "@/features/auth/KakaoLoginButton";
+import {
+  MARKETING_INFO,
+  PRIVACY_POLICY,
+  SERVICE_TERMS,
+  TermsDocument,
+} from "@/features/auth/consentDocuments";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -82,17 +89,20 @@ export default function SignupPage() {
               label="(필수) 서비스 이용약관에 동의합니다."
               register={register("agreeService")}
             />
+            <TermsDocument title="서비스 이용약관" body={SERVICE_TERMS} />
             <CheckboxRow
               id="agreePrivacy"
               error={errors.agreePrivacy?.message}
-              label="(필수) 개인정보 처리방침에 동의합니다."
+              label="(필수) 개인정보 수집·이용에 동의합니다."
               register={register("agreePrivacy")}
             />
+            <TermsDocument title="개인정보 처리방침" body={PRIVACY_POLICY} />
             <CheckboxRow
               id="agreeMarketing"
               label="(선택) 마케팅 정보 수신에 동의합니다."
               register={register("agreeMarketing")}
             />
+            <TermsDocument title="마케팅 정보 수신" body={MARKETING_INFO} />
           </fieldset>
 
           {errors.root?.message && (
@@ -105,6 +115,11 @@ export default function SignupPage() {
             {isSubmitting ? "가입 중…" : "가입하기"}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3 text-xs text-neutral-400">
+          <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" /> 또는 <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+        </div>
+        <KakaoLoginButton label="카카오로 시작하기" />
 
         <p className="mt-6 text-center text-sm text-neutral-500">
           이미 계정이 있으신가요?{" "}

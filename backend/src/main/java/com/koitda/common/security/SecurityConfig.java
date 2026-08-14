@@ -37,6 +37,9 @@ public class SecurityConfig {
 				.addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
+						// 카카오 소셜 로그인: 인가 URL 발급·콜백·동의완료·사용가능 여부는 비로그인 허용
+						.requestMatchers(HttpMethod.GET, "/api/v1/auth/kakao/authorize-url", "/api/v1/auth/kakao/available").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/auth/kakao/callback", "/api/v1/auth/kakao/complete").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/csrf").permitAll()
 						.requestMatchers("/actuator/health").permitAll()
 						// 카탈로그 조회는 비로그인도 허용(위시·내정보 등 나머지는 인증 필요)

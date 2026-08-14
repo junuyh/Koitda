@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api";
 import { authApi } from "@/features/auth/api";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas";
 import { Field, inputClass, buttonClass } from "@/components/form";
+import { KakaoLoginButton } from "@/features/auth/KakaoLoginButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,6 +75,11 @@ export default function LoginPage() {
             {isSubmitting ? "로그인 중…" : "로그인"}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3 text-xs text-neutral-400">
+          <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" /> 또는 <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+        </div>
+        <KakaoLoginButton label="카카오로 로그인" />
 
         <p className="mt-6 text-center text-sm text-neutral-500">
           아직 계정이 없으신가요?{" "}

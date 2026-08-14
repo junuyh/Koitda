@@ -26,6 +26,17 @@ function toSignupPayload(input: SignupInput) {
   };
 }
 
+export type TermsAgreementPayload = { termsType: string; termsVersion: string; agreed: boolean };
+
+// 카카오 콜백 결과: 기존 회원이면 로그인 완료, 신규면 개인정보 동의 필요.
+export type KakaoCallbackResult = {
+  status: "LOGGED_IN" | "CONSENT_REQUIRED";
+  user: AuthUser | null;
+  ticket: string | null;
+  suggestedNickname: string | null;
+  email: string | null;
+};
+
 export const authApi = {
   signup: (input: SignupInput) =>
     apiFetch<AuthUser>("/auth/signup", { method: "POST", body: toSignupPayload(input) }),
@@ -33,4 +44,15 @@ export const authApi = {
     apiFetch<AuthUser>("/auth/login", { method: "POST", body: input }),
   logout: () => apiFetch<null>("/auth/logout", { method: "POST" }),
   me: () => apiFetch<Me>("/users/me"),
+
+  // --- 카카오 소셜 로그인 ---
+  kakaoAvailable: () => apiFetch<{ available: boolean }>("/auth/kakao/available"),
+  kakaoAuthorizeUrl: () => apiFetch<{ authorizeUrl: string }>("/auth/kakao/authorize-url"),
+  kakaoCallback: (code: string, state: string) =>
+    apiFetch<KakaoCallbackResult>("/auth/kakao/callback", { method: "POST", body: { code, state } }),
+  kakaoComplete: (ticket: string, nickname: string, agreements: TermsAgreementPayload[]) =>
+    apiFetch<KakaoCallbackResult>("/auth/kakao/complete", {
+      method: "POST",
+      body: { ticket, nickname, agreements },
+    }),
 };

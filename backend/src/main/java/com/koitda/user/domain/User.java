@@ -96,6 +96,13 @@ public class User {
 		return user;
 	}
 
+	/** 소셜(카카오) 가입 회원 생성. 비밀번호가 없다 — 로그인은 소셜 연결로만 가능하다. */
+	public static User createSocialMember(String email, String nickname) {
+		User user = new User(email, null, nickname);
+		user.roles.add(RoleType.USER);
+		return user;
+	}
+
 	@PrePersist
 	void onCreate() {
 		OffsetDateTime now = OffsetDateTime.now();
