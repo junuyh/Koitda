@@ -42,4 +42,29 @@ export const adminApi = {
     apiFetch<void>(`/admin/seller-applications/${id}/approve`, { method: "POST" }),
   rejectApplication: (id: number, reason: string) =>
     apiFetch<void>(`/admin/seller-applications/${id}/reject`, { method: "POST", body: { reason } }),
+
+  // 신고 관리(ADMIN-002)
+  listReports: (resolution?: string) =>
+    apiFetch<ReportedItem[]>(`/admin/reports${resolution ? `?resolution=${resolution}` : ""}`),
+  hideReport: (moderationId: number) =>
+    apiFetch<void>(`/admin/reports/${moderationId}/hide`, { method: "POST" }),
+  dismissReport: (moderationId: number) =>
+    apiFetch<void>(`/admin/reports/${moderationId}/dismiss`, { method: "POST" }),
+  restoreReport: (moderationId: number) =>
+    apiFetch<void>(`/admin/reports/${moderationId}/restore`, { method: "POST" }),
+};
+
+export type ReportedItem = {
+  moderationId: number;
+  targetType: string;
+  targetId: number;
+  reportCount: number;
+  flagged: boolean;
+  hidden: boolean;
+  resolution: string;
+  title: string | null;
+  preview: string | null;
+  authorNickname: string | null;
+  reasons: string[];
+  lastReportedAt: string | null;
 };

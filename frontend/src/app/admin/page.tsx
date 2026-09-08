@@ -15,6 +15,11 @@ export default function AdminHomePage() {
     queryFn: () => adminApi.listApplications("PENDING"),
     retry: false,
   });
+  const reports = useQuery({
+    queryKey: ["admin-reports", "PENDING"],
+    queryFn: () => adminApi.listReports("PENDING"),
+    retry: false,
+  });
 
   const forbidden = patterns.isError || applications.isError;
 
@@ -42,6 +47,13 @@ export default function AdminHomePage() {
             desc="사업자·정산 정보를 확인해 판매자를 승인합니다."
             count={applications.data?.length}
             loading={applications.isLoading}
+          />
+          <ConsoleCard
+            href="/admin/reports"
+            title="신고 관리"
+            desc="신고된 콘텐츠를 검토해 숨김·무시합니다."
+            count={reports.data?.length}
+            loading={reports.isLoading}
           />
         </div>
       )}

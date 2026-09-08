@@ -63,4 +63,16 @@ public class Report {
 	public Long getId() {
 		return id;
 	}
+
+	public String getReasonCode() {
+		return reasonCode;
+	}
+
+	public String getDetail() {
+		return detail;
+	}
+
+	public java.time.OffsetDateTime getCreatedAt() {
+		return createdAt;
+	}
 }

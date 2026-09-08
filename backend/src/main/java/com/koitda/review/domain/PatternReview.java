@@ -121,6 +121,22 @@ public class PatternReview {
 		this.updatedAt = OffsetDateTime.now();
 	}
 
+	/** 관리자 숨김(ADMIN-002). 작성자 visibility 와 분리된 컬럼이라 작성자가 되돌릴 수 없다. */
+	public void hideByAdmin() {
+		this.moderationStatus = "HIDDEN";
+		this.updatedAt = OffsetDateTime.now();
+	}
+
+	/** 관리자 숨김 해제. */
+	public void restoreByAdmin() {
+		this.moderationStatus = "NORMAL";
+		this.updatedAt = OffsetDateTime.now();
+	}
+
+	public String getModerationStatus() {
+		return moderationStatus;
+	}
+
 	/** 논리 삭제(REVIEW-008). 삭제하면 재작성이 가능하다(부분 유니크가 deleted_at NULL 만 잠금). */
 	public void softDelete() {
 		this.deletedAt = OffsetDateTime.now();
